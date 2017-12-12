@@ -61,7 +61,7 @@ def eat_snap_and_fof(level, halo_number, snapnr, snappath, loadonlytype=[4],
     # one of them, but see the select_halo method for details.
     s.select_halo( s.subfind, haloid=haloid, galradfac=galradfac,
         rotate_disk=True, use_principal_axis=True, euler_rotation=False,
-        use_cold_gas_spin=False, do_rotation=False )
+        use_cold_gas_spin=False, do_rotation=True)
 
     # Sneak some more info into the s instance
     s.halo_number = halo_number
@@ -84,13 +84,7 @@ def get_cartesian_vectors(s, sf, mask):
     x,  y,  z  = s.pos[::,2][mask], s.pos[::,1][mask], s.pos[::,0][mask]
     vx, vy, vz = s.vel[::,2][mask], s.vel[::,1][mask], s.vel[::,0][mask]
 
-    # All three expressions for rxyz compute the same thing :-).
-    # rxyz = numpy.sqrt( x**2 + y**2 + z**2)
-    # rxyz = numpy.sqrt( (s.pos[mask]**2).sum(axis=1) )
     rxyz = s.r()[mask]
-
-    # Both expressions for rxy compute the same thing :-).
-    # rxy = numpy.sqrt( (s.pos[mask][:,1:]**2).sum(axis=1) )
-    rxy = numpy.sqrt( x**2 + y**2 )
+    rxy = np.sqrt( x**2 + y**2 )
 
     return (x, y, z), (vx, vy, vz), rxyz, rxy
