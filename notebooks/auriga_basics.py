@@ -85,6 +85,19 @@ def get_cartesian_vectors(s, sf, mask):
     vx, vy, vz = s.vel[::,2][mask], s.vel[::,1][mask], s.vel[::,0][mask]
 
     rxyz = s.r()[mask]
-    rxy = np.sqrt( x**2 + y**2 )
+    rxy = np.sqrt(x**2 + y**2)
 
     return (x, y, z), (vx, vy, vz), rxyz, rxy
+
+def get_cylindrical_vectors(s, sf, mask):
+    (x, y, z), (vx, vy, vz), rxyz, rxy = get_cartesian_vectors(s, sf, mask)
+
+    R = np.sqrt(x**2 + y**2)
+    phi = np.arctan2(y, x)
+    z = z
+    
+    vR = np.sqrt(vx**2 + vy**2)
+    vphi = np.arctan2(vy, vx)
+    vz = vz
+    
+    return (R, phi, z), (vR, vphi, vz)
