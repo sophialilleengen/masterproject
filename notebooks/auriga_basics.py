@@ -4,7 +4,9 @@ from gadget import gadget_readsnap
 from gadget_subfind import load_subfind
 
 def eat_snap_and_fof(level, halo_number, snapnr, snappath, loadonlytype=[4],
-                     haloid=0, galradfac=0.1, verbose=True):
+                     haloid=0, galradfac=0.1, verbose=True, rotate_disk=True, 
+                     use_principal_axis=True, euler_rotation=False, 
+                     use_cold_gas_spin=False, do_rotation=True):
     """ Method to eat an Auriga snapshot, given a level/halo_number/snapnr.
         Subfind has been executed 'on-the-fly', during the simulation run.
 
@@ -60,8 +62,9 @@ def eat_snap_and_fof(level, halo_number, snapnr, snappath, loadonlytype=[4],
     # Within rotate_disk there are three methods to handle the rotation. Choose
     # one of them, but see the select_halo method for details.
     s.select_halo( s.subfind, haloid=haloid, galradfac=galradfac,
-        rotate_disk=True, use_principal_axis=True, euler_rotation=False,
-        use_cold_gas_spin=False, do_rotation=True)
+        rotate_disk=rotate_disk, use_principal_axis=use_principal_axis, 
+        euler_rotation=euler_rotation, use_cold_gas_spin=use_cold_gas_spin, 
+        do_rotation=do_rotation)
 
     # Sneak some more info into the s instance
     s.halo_number = halo_number
