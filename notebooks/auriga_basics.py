@@ -83,17 +83,18 @@ def eat_snap_and_fof(level, halo_number, snapnr, snappath, loadonlytype=[4],
 
     return s, sf
 
-def get_cartesian_vectors(s, sf, mask):
+def get_cartesian_vectors(s, sf, mask, kpc = True):
     x,  y,  z  = s.pos[::,2][mask], s.pos[::,1][mask], s.pos[::,0][mask]
     vx, vy, vz = s.vel[::,2][mask], s.vel[::,1][mask], s.vel[::,0][mask]
 
     rxyz = s.r()[mask]
     rxy = np.sqrt(x**2 + y**2)
-
+    if kpc == True:
+        (x, y, z), (vx, vy, vz), rxyz, rxy = (1000.*x, 1000.*y, 1000.*z), (1000.*vx, 1000.*vy, 1000.*vz), 1000.*rxyz, 1000.*rxy 
     return (x, y, z), (vx, vy, vz), rxyz, rxy
 
-def get_cylindrical_vectors(s, sf, mask):
-    (x, y, z), (vx, vy, vz), rxyz, rxy = get_cartesian_vectors(s, sf, mask)
+def get_cylindrical_vectors(s, sf, mask, kpc = True):
+    (x, y, z), (vx, vy, vz), rxyz, rxy = get_cartesian_vectors(s, sf, mask, kpc)
 
     R = np.sqrt(x**2 + y**2)
     phi = np.arctan2(y, x)
