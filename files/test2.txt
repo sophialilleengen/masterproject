@@ -101,3 +101,23 @@ Halo 24; disk_height: 1.5
 125	0.34016849981	0.0239744283828	SH:1	0.0	0	362345	SH:2	0.0	0	107545	SH:3	0.0	0	48520
 126	0.136523224	0.00952166696794	SH:1	0.0	0	368105	SH:2	0.0	0	109887	SH:3	0.0	0	50501
 127	2.56737235602e-15	2.22044604925e-16	SH:1	0.0	0	372995	SH:2	0.0	0	110611	SH:3	0.0	0	50861
+Halo 24; disk_height: 1.5
+Snapnr; Age; Redshift; Subhalo number; surviving fraction; number of survivors; number of dwarf particles (can be repeated)
+Halo 24; disk_height: 15
+Snapnr; Age; Redshift; Subhalo number; surviving fraction; number of survivors; number of dwarf particles (can be repeated)
+Halo 24; disk_height: 2
+Snapnr; Age; Redshift; Subhalo number; surviving fraction; number of survivors; number of dwarf particles (can be repeated)
+Halo 24; disk_height: 2
+Snapnr; Age; Redshift; Subhalo number; surviving fraction; number of survivors; number of dwarf particles (can be repeated)
+Halo 24; disk_height: 2
+Snapnr; Age; Redshift; Subhalo number; surviving fraction; number of survivors; number of dwarf particles (can be repeated)
+Halo 24; disk_height: 2
+Snapnr; Age; Redshift; Subhalo number; surviving fraction; number of survivors; number of dwarf particles (can be repeated)
+Halo 24; disk_height: 2
+Snapnr; Age; Redshift; Subhalo number; surviving fraction; number of survivors; number of dwarf particles (can be repeated)
+Halo 24; disk_height: 2
+Snapnr; Age; Redshift; Subhalo number; surviving fraction; number of survivors; number of dwarf particles (can be repeated)
+Halo 24; disk_height: 2
+Snapnr; Age; Redshift; Subhalo number; surviving fraction; number of survivors; number of dwarf particles (can be repeated)
+Halo 24; disk_height: 2
+Snapnr; Age; Redshift; Subhalo number; surviving fraction; number of survivors; number of dwarf particles (can be repeated)
