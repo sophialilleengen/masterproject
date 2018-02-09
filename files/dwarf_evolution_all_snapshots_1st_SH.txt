@@ -107,3 +107,5 @@ Halo 24; disk_height: 2.0 kpc; diskwidth: 24.09 kpc
 Snapnr; Age; Redshift; surviving fraction; nr of survivors; nr of dwarf stars; nr of main gal stars
 Halo 24; disk_height: 2.0 kpc; diskwidth: 24.09 kpc
 Snapnr; Age; Redshift; surviving fraction; nr of survivors; nr of dwarf stars; nr of main gal stars
+Halo 24; disk_height: 2.0 kpc; diskwidth: 24.09 kpc
+Snapnr; Age; Redshift; surviving fraction; nr of survivors; nr of dwarf stars; nr of main gal stars
