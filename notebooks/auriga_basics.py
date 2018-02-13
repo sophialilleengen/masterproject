@@ -105,3 +105,28 @@ def get_cylindrical_vectors(s, sf, mask, kpc = True):
     vz = vz
     
     return (R, phi, z), (vR, vphi, vz)
+
+def masks(s, sf, gas = True, dm = True, stars = True, alls = True, rmin_Mpc = 0., rmax_Mpc = None): 
+    igas, idm, istars, iall = None, None, None, None
+    
+    if rmax_Mpc == None:
+        rmax_Mpc = s.galrad
+    
+    out = []
+    if gas:
+        igas, = np.where( (s.r() < rmax_Mpc) & (s.r() > rmin_Mpc) & (s.type == 0) )
+        out.append(igas)
+    if dm:
+        idm, = np.where( (s.r() < rmax_Mpc) & (s.r() > rmin_Mpc) & ((s.type == 1) + (s.type == 2) + (s.type == 3) ))
+        out.append(idm)
+    if stars:
+        istars, = np.where( (s.r() < rmax_Mpc) & (s.r() > rmin_Mpc) & (s.type == 4) )
+        out.append(istars)
+    if alls:
+        iall, = np.where( (s.r() < rmax_Mpc) & (s.r() > rmin_Mpc) )
+        out.append(iall)
+        
+    
+    return(*out)
+    
+    

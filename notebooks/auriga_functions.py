@@ -1,6 +1,51 @@
 import numpy as np
 import matplotlib.pyplot as plt
 
+def dens(M, R_kpc, z_kpc, dR_kpc = 1, dz_kpc = 1):
+    '''
+    NAME: 
+        dens
+        
+    PURPOSE:
+        calculates the binned density in cylindrical coordinates
+        
+    INPUT:
+        M - mass array in 10^10 M_sun (same length as R_kpc and z_kpc) 
+        R_kpc - radial distance array in kpc (same length as M and z_kpc)
+        z_kpc - vertical height array in kpc (same length as M and R_kpc)
+        dR_kpc - radial bin width in kpc
+        dz_kpc - vertical bin width in kpc 
+        
+    OUTPUT:
+        rho - density in 10^10 M_sun / kpc^3
+        rho_arr_real, rho_arr_mean - needed for weights in histogram (might be wrong) in 10^10 M_sun / kpc^3
+        Rbins, zbins - R and z bins (also for histogram)
+        
+    HISTORY:
+        13-02-2018 - Written - Milanov (ESO)
+    
+    To do:
+        - check how to weight the histogram properly
+        - make tests that inputs are in instances I want
+    '''
+    
+    Rmin_kpc, Rmax_kpc = np.min(R_kpc), np.max(R_kpc)
+    zmin_kpc, zmax_kpc = np.min(z_kpc), np.max(z_kpc)
+
+    Rbins, zbins = np.arange(Rmin_kpc, Rmax_kpc, dR_kpc), np.arange(zmin_kpc, zmax_kpc, dz_kpc)
+    mbins, volbins = np.zeros((len(Rbins), len(zbins))), np.zeros((len(Rbins), len(zbins))) 
+    rho_arr_real, rho_arr_mean = np.zeros(len(R_kpc)), np.zeros(len(R_kpc))
+    for i in range(len(Rbins)):
+        for j in range(len(zbins)):
+            inbin = (Rbins[i] <= R_kpc) & (R_kpc < (Rbins[i] + dR_kpc)) & (zbins[j] <= z_kpc) & (z_kpc < (zbins[j] + dz_kpc))
+            mbins[i,j] = np.sum(M[inbin])
+            volbins[i,j] = np.pi * dz_kpc * (2. * Rbins[i] * dR_kpc + dR_kpc**2)
+            rho_arr_real[inbin] = mbins[i,j] / volbins[i,j] 
+            rho_arr_mean[inbin] = (mbins[i,j] / volbins[i,j]) / len(inbin) 
+
+    rho = mbins / volbins
+    return(rho, rho_arr_real, rho_arr_mean, Rbins, zbins)
+
 def decomp(s, plotter = False, disccirc = 0.7, galrad = 0.1, Gcosmo = 43.0071):
     ID = s.id
     # get number of particles 
