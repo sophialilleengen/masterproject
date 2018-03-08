@@ -127,6 +127,6 @@ def masks(s, sf, gas = True, dm = True, stars = True, alls = True, rmin_Mpc = 0.
         out.append(iall)
         
     
-    return(*out)
+    return(out)
     
     
