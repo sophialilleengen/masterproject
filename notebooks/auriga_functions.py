@@ -1,7 +1,8 @@
 import numpy as np
 import matplotlib.pyplot as plt
+import sys
 
-def dens(M, R_kpc, z_kpc, dR_kpc = 1, dz_kpc = 1):
+def dens(M = None, R_kpc = None, z_kpc = None, s = None, dR_kpc = 1., dz_kpc = 1.):
     '''
     NAME: 
         dens
@@ -10,9 +11,11 @@ def dens(M, R_kpc, z_kpc, dR_kpc = 1, dz_kpc = 1):
         calculates the binned density in cylindrical coordinates
         
     INPUT:
+        as input values either the combination of M, R_kpc and z_kpc is needed or just s
         M - mass array in 10^10 M_sun (same length as R_kpc and z_kpc) 
         R_kpc - radial distance array in kpc (same length as M and z_kpc)
         z_kpc - vertical height array in kpc (same length as M and R_kpc)
+        s - Snapshot of simulation to be investigated
         dR_kpc - radial bin width in kpc
         dz_kpc - vertical bin width in kpc 
         
@@ -23,12 +26,25 @@ def dens(M, R_kpc, z_kpc, dR_kpc = 1, dz_kpc = 1):
         
     HISTORY:
         13-02-2018 - Written - Milanov (ESO)
+        09-03-2018 - Modified: s as alternative input - Milanov (ESO)
     
     To do:
         - check how to weight the histogram properly
         - make tests that inputs are in instances I want
     '''
-    
+    if (M == None) * (R_kpc == None) * (z_kpc == None) * (s == None):
+        sys.exit('Need either s or (M, R_kpc, z_kpc) as input.')
+        
+    elif (M == None) * (R_kpc == None) * (z_kpc == None) * (s != None):
+        M = s.mass()
+        R_kpc = 1000. sqrt(s.pos[1]**2 + s.pos[2]**2) 
+        z_kpc = 1000. * s.pos[0]    
+        
+    elif (s != None) * ((M != None) or (R_kpc != None) or (z_kpc != None)):
+        M = s.mass()
+        R_kpc = 1000. sqrt(s.pos[1]**2 + s.pos[2]**2) 
+        z_kpc = 1000. * s.pos[0]        
+        
     Rmin_kpc, Rmax_kpc = np.min(R_kpc), np.max(R_kpc)
     zmin_kpc, zmax_kpc = np.min(z_kpc), np.max(z_kpc)
 
@@ -44,7 +60,7 @@ def dens(M, R_kpc, z_kpc, dR_kpc = 1, dz_kpc = 1):
             rho_arr_mean[inbin] = (mbins[i,j] / volbins[i,j]) / len(inbin) 
 
     rho = mbins / volbins
-    return(rho, rho_arr_real, rho_arr_mean, Rbins, zbins)
+    return(rho, rho_arr_real, rho_arr_mean, Rbins, zbins, volbins)
 
 def decomp(s, plotter = False, disccirc = 0.7, galrad = 0.1, Gcosmo = 43.0071):
     ID = s.id
