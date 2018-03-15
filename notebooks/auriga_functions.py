@@ -2,6 +2,9 @@ import numpy as np
 import matplotlib.pyplot as plt
 import sys
 
+from areposnap.gadget import gadget_readsnap
+from areposnap.gadget_subfind import load_subfind
+
 def dens(M = None, R_kpc = None, z_kpc = None, s = None, dR_kpc = 1., dz_kpc = 1.):
     '''
     NAME: 
@@ -37,12 +40,12 @@ def dens(M = None, R_kpc = None, z_kpc = None, s = None, dR_kpc = 1., dz_kpc = 1
         
     elif (M == None) * (R_kpc == None) * (z_kpc == None) * (s != None):
         M = s.mass()
-        R_kpc = 1000. sqrt(s.pos[1]**2 + s.pos[2]**2) 
+        R_kpc = 1000. * sqrt(s.pos[1]**2 + s.pos[2]**2) 
         z_kpc = 1000. * s.pos[0]    
         
     elif (s != None) * ((M != None) or (R_kpc != None) or (z_kpc != None)):
         M = s.mass()
-        R_kpc = 1000. sqrt(s.pos[1]**2 + s.pos[2]**2) 
+        R_kpc = 1000. * sqrt(s.pos[1]**2 + s.pos[2]**2) 
         z_kpc = 1000. * s.pos[0]        
         
     Rmin_kpc, Rmax_kpc = np.min(R_kpc), np.max(R_kpc)
@@ -61,6 +64,69 @@ def dens(M = None, R_kpc = None, z_kpc = None, s = None, dR_kpc = 1., dz_kpc = 1
 
     rho = mbins / volbins
     return(rho, rho_arr_real, rho_arr_mean, Rbins, zbins, volbins)
+
+def fitting_dens(M = None, R_kpc = None, z_kpc = None, s = None, dR_kpc = 1., dz_kpc = 1.):
+    '''
+    NAME: 
+        dens
+        
+    PURPOSE:
+        calculates the binned density in cylindrical coordinates
+        
+    INPUT:
+        as input values either the combination of M, R_kpc and z_kpc is needed or just s
+        M - mass array in 10^10 M_sun (same length as R_kpc and z_kpc) 
+        R_kpc - radial distance array in kpc (same length as M and z_kpc)
+        z_kpc - vertical height array in kpc (same length as M and R_kpc)
+        s - Snapshot of simulation to be investigated
+        dR_kpc - radial bin width in kpc
+        dz_kpc - vertical bin width in kpc 
+        
+    OUTPUT:
+        rho - density in 10^10 M_sun / kpc^3
+        rho_arr_real, rho_arr_mean - needed for weights in histogram (might be wrong) in 10^10 M_sun / kpc^3
+        Rbins, zbins - R and z bins (also for histogram)
+        
+    HISTORY:
+        13-02-2018 - Written - Milanov (ESO)
+        09-03-2018 - Modified: s as alternative input - Milanov (ESO)
+    
+    To do:
+        - check how to weight the histogram properly
+        - make tests that inputs are in instances I want
+    '''
+    if (np.any(M == None)) * (np.any(R_kpc == None)) * (np.any(z_kpc == None)) * (s == None):
+        print('1')
+        sys.exit('Need either s or (M, R_kpc, z_kpc) as input.')
+        
+    elif (np.any(M == None)) * (np.any(R_kpc == None)) * (np.any(z_kpc == None)) * (s != None):
+        print('2')
+        M = s.mass()
+        R_kpc = 1000. * sqrt(s.pos[1]**2 + s.pos[2]**2) 
+        z_kpc = 1000. * s.pos[0]    
+        
+    elif (s != None) * ((np.any(M != None)) or (np.any(R_kpc != None)) or (np.any(z_kpc != None))):
+        print('3')
+        M = s.mass()
+        R_kpc = 1000. * sqrt(s.pos[1]**2 + s.pos[2]**2) 
+        z_kpc = 1000. * s.pos[0]        
+    else:
+        print('4')
+        
+    Rmin_kpc, Rmax_kpc = np.min(R_kpc), np.max(R_kpc)
+    zmin_kpc, zmax_kpc = np.min(z_kpc), np.max(z_kpc)
+    
+    print(Rmin_kpc, Rmax_kpc, zmin_kpc, zmax_kpc)
+    Rbins, zbins = np.arange(Rmin_kpc, Rmax_kpc, dR_kpc), np.arange(zmin_kpc, zmax_kpc, dz_kpc)
+    mbins, volbins = np.zeros((len(Rbins), len(zbins))), np.zeros((len(Rbins), len(zbins))) 
+    for i in range(len(Rbins)):
+        for j in range(len(zbins)):
+            inbin = (Rbins[i] <= R_kpc) & (R_kpc < (Rbins[i] + dR_kpc)) & (zbins[j] <= z_kpc) & (z_kpc < (zbins[j] + dz_kpc))
+            mbins[i,j] = np.sum(M[inbin])
+            volbins[i,j] = np.pi * dz_kpc * (2. * Rbins[i] * dR_kpc + dR_kpc**2)
+   
+    rho = mbins / volbins
+    return(rho, Rbins, zbins, volbins)
 
 def decomp(s, plotter = False, disccirc = 0.7, galrad = 0.1, Gcosmo = 43.0071):
     ID = s.id
