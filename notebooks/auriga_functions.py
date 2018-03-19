@@ -5,7 +5,7 @@ import sys
 from areposnap.gadget import gadget_readsnap
 from areposnap.gadget_subfind import load_subfind
 
-def dens(M = None, R_kpc = None, z_kpc = None, s = None, dR_kpc = 1., dz_kpc = 1.):
+def dens(M = None, R_kpc = None, z_kpc = None, s = None, dR_kpc = None, dz_kpc = None, nbins = None):
     '''
     NAME: 
         dens
@@ -50,6 +50,10 @@ def dens(M = None, R_kpc = None, z_kpc = None, s = None, dR_kpc = 1., dz_kpc = 1
         
     Rmin_kpc, Rmax_kpc = np.min(R_kpc), np.max(R_kpc)
     zmin_kpc, zmax_kpc = np.min(z_kpc), np.max(z_kpc)
+    
+    if nbins != None:
+        dR_kpc = (Rmax_kpc - Rmin_kpc) / nbins
+        dz_kpc = (zmax_kpc - zmin_kpc) / nbins
 
     Rbins, zbins = np.arange(Rmin_kpc, Rmax_kpc, dR_kpc), np.arange(zmin_kpc, zmax_kpc, dz_kpc)
     mbins, volbins = np.zeros((len(Rbins), len(zbins))), np.zeros((len(Rbins), len(zbins))) 
@@ -65,7 +69,7 @@ def dens(M = None, R_kpc = None, z_kpc = None, s = None, dR_kpc = 1., dz_kpc = 1
     rho = mbins / volbins
     return(rho, rho_arr_real, rho_arr_mean, Rbins, zbins, volbins)
 
-def fitting_dens(M = None, R_kpc = None, z_kpc = None, s = None, dR_kpc = 1., dz_kpc = 1.):
+def fitting_dens(M = None, R_kpc = None, z_kpc = None, s = None, dR_kpc = None, dz_kpc = None, nbins = None):
     '''
     NAME: 
         dens
@@ -111,12 +115,16 @@ def fitting_dens(M = None, R_kpc = None, z_kpc = None, s = None, dR_kpc = 1., dz
         R_kpc = 1000. * sqrt(s.pos[1]**2 + s.pos[2]**2) 
         z_kpc = 1000. * s.pos[0]        
     else:
-        print('4')
+        print('Mass, radius and height given as input.')
         
     Rmin_kpc, Rmax_kpc = np.min(R_kpc), np.max(R_kpc)
     zmin_kpc, zmax_kpc = np.min(z_kpc), np.max(z_kpc)
+
+    if nbins != None:
+        dR_kpc = (Rmax_kpc - Rmin_kpc) / nbins
+        dz_kpc = (zmax_kpc - zmin_kpc) / nbins
     
-    print(Rmin_kpc, Rmax_kpc, zmin_kpc, zmax_kpc)
+    #print(Rmin_kpc, Rmax_kpc, zmin_kpc, zmax_kpc)
     Rbins, zbins = np.arange(Rmin_kpc, Rmax_kpc, dR_kpc), np.arange(zmin_kpc, zmax_kpc, dz_kpc)
     mbins, volbins = np.zeros((len(Rbins), len(zbins))), np.zeros((len(Rbins), len(zbins))) 
     for i in range(len(Rbins)):
