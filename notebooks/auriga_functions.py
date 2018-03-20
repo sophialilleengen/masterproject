@@ -65,9 +65,8 @@ def dens(M = None, R_kpc = None, z_kpc = None, s = None, dR_kpc = None, dz_kpc =
             volbins[i,j] = np.pi * dz_kpc * (2. * Rbins[i] * dR_kpc + dR_kpc**2)
             rho_arr_real[inbin] = mbins[i,j] / volbins[i,j] 
             rho_arr_mean[inbin] = (mbins[i,j] / volbins[i,j]) / len(inbin) 
-    m_enc = np.sum(mbins, axis = 1)
     rho = mbins / volbins
-    return(rho, rho_arr_real, rho_arr_mean, Rbins, zbins, volbins, m_enc)
+    return(rho, rho_arr_real, rho_arr_mean, Rbins, zbins, volbins)
 
 def fitting_dens(M = None, R_kpc = None, z_kpc = None, s = None, dR_kpc = None, dz_kpc = None, nbins = None):
     '''
@@ -132,10 +131,32 @@ def fitting_dens(M = None, R_kpc = None, z_kpc = None, s = None, dR_kpc = None, 
             inbin = (Rbins[i] <= R_kpc) & (R_kpc < (Rbins[i] + dR_kpc)) & (zbins[j] <= z_kpc) & (z_kpc < (zbins[j] + dz_kpc))
             mbins[i,j] = np.sum(M[inbin])
             volbins[i,j] = np.pi * dz_kpc * (2. * Rbins[i] * dR_kpc + dR_kpc**2)
-   
-    m_enc = np.sum(mbins, axis = 1)
+       
     rho = mbins / volbins
-    return(rho, Rbins, zbins, volbins, m_enc)
+    return(rho, Rbins, zbins, volbins)
+
+def enclosed_mass(mass, r, nbins = None, dr = None):
+    rmin, rmax = np.min(r), np.max(r)
+
+    if nbins != None:
+        dr = (rmax - rmin) / nbins
+    elif dr != None:
+        nbins = int((rmax - rmin) / dr)
+    else:
+        sys.exit('Please give either nbins or dr as input!')
+        
+    #rbins = np.arange(rmin, rmax, dr)
+    rbins = np.logspace(np.log10(rmin), np.log10(rmax), nbins)
+    mbins = np.zeros(len(rbins))
+    
+    for i in range(nbins):
+        inbin = (rbins[i] <= r) & (r < (rbins[i] + dr))
+        mbins[i] = np.sum(mass[inbin])
+        
+    m_enc = mbins
+    m_cum = np.cumsum(m_enc)
+    
+    return(m_cum, m_enc, rbins)
 
 def decomp(s, plotter = False, disccirc = 0.7, galrad = 0.1, Gcosmo = 43.0071):
     ID = s.id
