@@ -65,9 +65,9 @@ def dens(M = None, R_kpc = None, z_kpc = None, s = None, dR_kpc = None, dz_kpc =
             volbins[i,j] = np.pi * dz_kpc * (2. * Rbins[i] * dR_kpc + dR_kpc**2)
             rho_arr_real[inbin] = mbins[i,j] / volbins[i,j] 
             rho_arr_mean[inbin] = (mbins[i,j] / volbins[i,j]) / len(inbin) 
-
+    m_enc = np.sum(mbins, axis = 1)
     rho = mbins / volbins
-    return(rho, rho_arr_real, rho_arr_mean, Rbins, zbins, volbins)
+    return(rho, rho_arr_real, rho_arr_mean, Rbins, zbins, volbins, m_enc)
 
 def fitting_dens(M = None, R_kpc = None, z_kpc = None, s = None, dR_kpc = None, dz_kpc = None, nbins = None):
     '''
@@ -133,8 +133,9 @@ def fitting_dens(M = None, R_kpc = None, z_kpc = None, s = None, dR_kpc = None, 
             mbins[i,j] = np.sum(M[inbin])
             volbins[i,j] = np.pi * dz_kpc * (2. * Rbins[i] * dR_kpc + dR_kpc**2)
    
+    m_enc = np.sum(mbins, axis = 1)
     rho = mbins / volbins
-    return(rho, Rbins, zbins, volbins)
+    return(rho, Rbins, zbins, volbins, m_enc)
 
 def decomp(s, plotter = False, disccirc = 0.7, galrad = 0.1, Gcosmo = 43.0071):
     ID = s.id
