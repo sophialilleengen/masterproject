@@ -125,12 +125,12 @@ def fitting_dens(M = None, R_kpc = None, z_kpc = None, s = None, dR_kpc = None, 
     
     #print(Rmin_kpc, Rmax_kpc, zmin_kpc, zmax_kpc)
     Rbins, zbins = np.arange(Rmin_kpc, Rmax_kpc, dR_kpc), np.arange(zmin_kpc, zmax_kpc, dz_kpc)
-    mbins, volbins = np.zeros((len(Rbins), len(zbins))), np.zeros((len(Rbins), len(zbins))) 
-    for i in range(len(Rbins)):
-        for j in range(len(zbins)):
-            inbin = (Rbins[i] <= R_kpc) & (R_kpc < (Rbins[i] + dR_kpc)) & (zbins[j] <= z_kpc) & (z_kpc < (zbins[j] + dz_kpc))
+    mbins, volbins = np.zeros((len(zbins), len(Rbins))), np.zeros((len(zbins), len(Rbins))) 
+    for i in range(len(zbins)):
+        for j in range(len(Rbins)):
+            inbin = (Rbins[j] <= R_kpc) & (R_kpc < (Rbins[j] + dR_kpc)) & (zbins[i] <= z_kpc) & (z_kpc < (zbins[i] + dz_kpc))
             mbins[i,j] = np.sum(M[inbin])
-            volbins[i,j] = np.pi * dz_kpc * (2. * Rbins[i] * dR_kpc + dR_kpc**2)
+            volbins[i,j] = np.pi * dz_kpc * (2. * Rbins[j] * dR_kpc + dR_kpc**2)
        
     rho = mbins / volbins
     return(rho, Rbins, zbins, volbins)
