@@ -90,7 +90,7 @@ def get_cartesian_vectors(s, sf, mask, kpc = True):
     rxyz = s.r()[mask]
     rxy = np.sqrt(x**2 + y**2)
     if kpc == True:
-        (x, y, z), (vx, vy, vz), rxyz, rxy = (1000.*x, 1000.*y, 1000.*z), (1000.*vx, 1000.*vy, 1000.*vz), 1000.*rxyz, 1000.*rxy 
+        (x, y, z), (vx, vy, vz), rxyz, rxy = (1000.*x, 1000.*y, 1000.*z), (vx, vy, vz), 1000.*rxyz, 1000.*rxy 
     return (x, y, z), (vx, vy, vz), rxyz, rxy
 
 def get_cylindrical_vectors(s, sf, mask, kpc = True):
