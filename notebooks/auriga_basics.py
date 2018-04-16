@@ -1,4 +1,5 @@
 import numpy as np
+import scipy as sc
 
 from gadget import gadget_readsnap
 from gadget_subfind import load_subfind
@@ -100,8 +101,8 @@ def get_cylindrical_vectors(s, sf, mask, kpc = True):
     phi = np.arctan2(y, x)
     z = z
     
-    vR = np.sqrt(vx**2 + vy**2)
-    vphi = np.arctan2(vy, vx)
+    vR= +vx * sc.cos(phi) + vy * sc.sin(phi)
+    vphi= -vx * sc.sin(phi) + vy * sc.cos(phi)
     vz = vz
     
     return (R, phi, z), (vR, vphi, vz)
