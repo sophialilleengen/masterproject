@@ -1,0 +1,6 @@
+# ID	r [kpc]	jR [kpc km/s]	lz [kpc km/s]	jz [kpc km/s]
+
+
+
+
+
