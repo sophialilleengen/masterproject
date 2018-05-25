@@ -158,7 +158,9 @@ def enclosed_mass(mass, r, nbins = None, dr = None):
     
     return(m_cum, m_enc, rbins)
 
-def decomp(s, plotter = False, disccirc = 0.7, galrad = 0.1, Gcosmo = 43.0071):
+#fig, ax = plt.subplots(1, 1, figsize=(8,6))
+
+def decomp(s, r_cutoff_Mpc = 0.002, Gcosmo = 43.0071, plotter = False):
     ID = s.id
     # get number of particles 
     na = s.nparticlesall
@@ -171,8 +173,8 @@ def decomp(s, plotter = False, disccirc = 0.7, galrad = 0.1, Gcosmo = 43.0071):
     age[st:en] = s.data['age']
 
     # create masks for all particles / stars within given radius
-    iall, = np.where( (s.r() < galrad) & (s.r() > 0.) )
-    istars, = np.where( (s.r() < galrad) & (s.r() > 0.) & (s.type == 4) & (age > 0.) )
+    iall, = np.where( (s.r() < s.galrad) & (s.r() > 0.) )
+    istars, = np.where( (s.r() < s.galrad) & (s.r() > 0.) & (s.type == 4) & (age > 0.) )
 
     # calculate radius of all particles within galrad, sort them, \
     # get their mass and calculate their cumulative mass sorted by their distance
@@ -257,27 +259,34 @@ def decomp(s, plotter = False, disccirc = 0.7, galrad = 0.1, Gcosmo = 43.0071):
     # calculate eps = jz/j_z_max 
     eps2[:] /= jcmax[:]
     
+    Radius_Mpc = s.r()[istars][iensort]
+    #r_eff_Mpc = 0.002
     
     idisk = np.where(eps2 >= 0.7)
-    ibulge = np.where(eps2 < 0.7)
+    ispheroid = np.where(eps2 < 0.7)
+    ibulge = np.where((eps2 < 0.7) & (Radius_Mpc < r_cutoff_Mpc))
+    ihalo = np.where((eps2 < 0.7) & (Radius_Mpc > r_cutoff_Mpc))
     disk_ID = ID[istars][iensort][idisk]
+    spheroid_ID = ID[istars][iensort][ispheroid]
     bulge_ID = ID[istars][iensort][ibulge]
+    halo_ID = ID[istars][iensort][ihalo]
+    
     
     if plotter == True:
         fig, ax = plt.subplots(1, 1, figsize=(8,6))
-        #fig.set_axis_labels( xlabel="$\epsilon$", ylabel="$\\rm{f(\epsilon)}$" )
-        ax.set_xlabel("$\epsilon$")
-        ax.set_ylabel("$\\rm{f(\epsilon)}$")
+        
         ydatatot, edges = np.histogram( eps2, bins=100, weights=smass, range=[-1.7,1.7] )
         xdatatot = 0.5 * (edges[1:] + edges[:-1])
         xdata = xdatatot
 
         ydatad, edgesd = np.histogram( eps2[idisk], bins=100, weights=smass[idisk], range=[-1.7,1.7] )
         ydatab, edgesb = np.histogram( eps2[ibulge], bins=100, weights=smass[ibulge], range=[-1.7,1.7] )
+        ydatah, edgesh = np.histogram( eps2[ihalo], bins=100, weights=smass[ihalo], range=[-1.7,1.7] )
 
-        ax.fill( xdata, ydatab, fc='r', alpha=0.5, fill=True, lw=0, label='spheroid' )
+        ax.fill( xdata, ydatab, fc='r', alpha=0.5, fill=True, lw=0, label='bulge' )
         ax.fill( xdata, ydatad, fc='b', alpha=0.5, fill=True, lw=0, label='disc' )
+        ax.fill( xdata, ydatah, fc='g', alpha=0.5, fill=True, lw=0, label='halo' )
         ax.plot( xdatatot, ydatatot, 'k', label='total' )
         ax.legend()
     
-    return(disk_ID, bulge_ID)
+    return(disk_ID, spheroid_ID, bulge_ID, halo_ID)
