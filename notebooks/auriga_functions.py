@@ -160,7 +160,7 @@ def enclosed_mass(mass, r, nbins = None, dr = None):
 
 #fig, ax = plt.subplots(1, 1, figsize=(8,6))
 
-def decomp(s, r_cutoff_Mpc = 0.002, Gcosmo = 43.0071, plotter = False):
+def decomp(s, r_cutoff_Mpc = 0.05, Gcosmo = 43.0071, plotter = False, disccirc = 0.7):
     ID = s.id
     # get number of particles 
     na = s.nparticlesall
@@ -262,10 +262,10 @@ def decomp(s, r_cutoff_Mpc = 0.002, Gcosmo = 43.0071, plotter = False):
     Radius_Mpc = s.r()[istars][iensort]
     #r_eff_Mpc = 0.002
     
-    idisk = np.where(eps2 >= 0.7)
-    ispheroid = np.where(eps2 < 0.7)
-    ibulge = np.where((eps2 < 0.7) & (Radius_Mpc < r_cutoff_Mpc))
-    ihalo = np.where((eps2 < 0.7) & (Radius_Mpc > r_cutoff_Mpc))
+    idisk = np.where(eps2 >= disccirc)
+    ispheroid = np.where(eps2 < disccirc)
+    ibulge = np.where((eps2 < disccirc) & (Radius_Mpc < r_cutoff_Mpc))
+    ihalo = np.where((eps2 < disccirc) & (Radius_Mpc > r_cutoff_Mpc))
     disk_ID = ID[istars][iensort][idisk]
     spheroid_ID = ID[istars][iensort][ispheroid]
     bulge_ID = ID[istars][iensort][ibulge]
