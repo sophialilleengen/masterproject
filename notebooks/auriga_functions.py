@@ -160,7 +160,7 @@ def enclosed_mass(mass, r, nbins = None, dr = None):
 
 #fig, ax = plt.subplots(1, 1, figsize=(8,6))
 
-def decomp(s, r_cutoff_Mpc = 0.05, Gcosmo = 43.0071, plotter = False, disccirc = 0.7):
+def decomp(s, r_cutoff_Mpc = 0.05, Gcosmo = 43.0071, plotter = False, disccirc_min = 0.7, disccirc_max = 1.1):
     ID = s.id
     # get number of particles 
     na = s.nparticlesall
@@ -262,10 +262,10 @@ def decomp(s, r_cutoff_Mpc = 0.05, Gcosmo = 43.0071, plotter = False, disccirc =
     Radius_Mpc = s.r()[istars][iensort]
     #r_eff_Mpc = 0.002
     
-    idisk = np.where(eps2 >= disccirc)
-    ispheroid = np.where(eps2 < disccirc)
-    ibulge = np.where((eps2 < disccirc) & (Radius_Mpc < r_cutoff_Mpc))
-    ihalo = np.where((eps2 < disccirc) & (Radius_Mpc > r_cutoff_Mpc))
+    idisk = np.where((eps2 >= disccirc_min) & (eps2 < disccirc_max))
+    ispheroid = np.where(eps2 < disccirc_min)
+    ibulge = np.where((eps2 < disccirc_min) & (Radius_Mpc < r_cutoff_Mpc))
+    ihalo = np.where((eps2 < disccirc_min) & (Radius_Mpc > r_cutoff_Mpc))
     disk_ID = ID[istars][iensort][idisk]
     spheroid_ID = ID[istars][iensort][ispheroid]
     bulge_ID = ID[istars][iensort][ibulge]
@@ -280,13 +280,19 @@ def decomp(s, r_cutoff_Mpc = 0.05, Gcosmo = 43.0071, plotter = False, disccirc =
         xdata = xdatatot
 
         ydatad, edgesd = np.histogram( eps2[idisk], bins=100, weights=smass[idisk], range=[-1.7,1.7] )
-        ydatab, edgesb = np.histogram( eps2[ibulge], bins=100, weights=smass[ibulge], range=[-1.7,1.7] )
-        ydatah, edgesh = np.histogram( eps2[ihalo], bins=100, weights=smass[ihalo], range=[-1.7,1.7] )
+        #ydatab, edgesb = np.histogram( eps2[ibulge], bins=100, weights=smass[ibulge], range=[-1.7,1.7] )
+        #ydatah, edgesh = np.histogram( eps2[ihalo], bins=100, weights=smass[ihalo], range=[-1.7,1.7] )
+        ydatas, edgess = np.histogram( eps2[ispheroid], bins=100, weights=smass[ispheroid], range=[-1.7,1.7] )
 
-        ax.fill( xdata, ydatab, fc='r', alpha=0.5, fill=True, lw=0, label='bulge' )
+        #ax.fill( xdata, ydatab, fc='r', alpha=0.5, fill=True, lw=0, label='bulge' )
         ax.fill( xdata, ydatad, fc='b', alpha=0.5, fill=True, lw=0, label='disc' )
-        ax.fill( xdata, ydatah, fc='g', alpha=0.5, fill=True, lw=0, label='halo' )
+        #ax.fill( xdata, ydatah, fc='g', alpha=0.5, fill=True, lw=0, label='halo' )
+        ax.fill( xdata, ydatas, fc='r', alpha=0.5, fill=True, lw=0, label='spheroid' )
+        
+
         ax.plot( xdatatot, ydatatot, 'k', label='total' )
+        ax.set_xlabel('$\epsilon$')
+        ax.set_ylabel('$f(\epsilon)$')
         ax.legend()
-    
+        plt.show()
     return(disk_ID, spheroid_ID, bulge_ID, halo_ID)
