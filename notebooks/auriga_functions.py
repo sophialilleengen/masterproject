@@ -160,6 +160,7 @@ def enclosed_mass(mass, r, nbins = None, dr = None):
 
 #fig, ax = plt.subplots(1, 1, figsize=(8,6))
 
+    
 def decomp(s, r_cutoff_Mpc = 0.05, Gcosmo = 43.0071, plotter = False, disccirc_min = 0.7, disccirc_max = 1.1):
     ID = s.id
     # get number of particles 
