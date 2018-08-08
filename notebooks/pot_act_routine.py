@@ -6,7 +6,7 @@
         INPUT:
             
         OUTPUT:
-            
+            x
         HISTORY:
             2018-0X-XX - Written (Milanov, ESO)
         """
@@ -70,8 +70,8 @@ class PA_routine:
         PURPOSE:
             calculate density of cylindrical binned stars in disk component of the simulation data
         INPUT:
-            R_kpc: array of each star's radial distance to center in kpc
-            z_kpc: array of each star's vertical distance to center in kpc
+            R_kpc:  array of each star's radial distance to center in kpc
+            z_kpc:  array of each star's vertical distance to center in kpc
             dR_kpc: bin length in kpc
             dz_kpc: bin height in kpc
             M_disk_stars_10Msun: array of each star's mass in 10^10 M_sun
@@ -123,18 +123,19 @@ class PA_routine:
     def fit_disk_MNdens(self, R_kpc, z_kpc, dR_kpc, dz_kpc, M_tot_disk_stars_10Msun, M_disk_stars_10Msun):
         """
         NAME:
-            
+            fit_disk_MNdens
         PURPOSE:
-            
+            fit density of disk to MN density 
         INPUT:
             
         OUTPUT:
             
         HISTORY:
-            2018-0X-XX - Written (Milanov, ESO)
+            2018-08-08 - Written (Milanov, ESO)
         """
         rho_10Msun_kpc3_data, R_kpc_data, z_kpc_data = self.disk_dens_data(R_kpc, z_kpc, dR_kpc, dz_kpc, M_disk_stars_10Msun)
         
+        # make some geometry magic to fit the disk_dens with a curve_fit despite fitting it to 2dim data 
         side_x = R_data
         side_y = z_data
         X1, X2 = np.meshgrid(side_x, side_y)
@@ -148,10 +149,17 @@ class PA_routine:
         z = rho_data
         Z = z.reshape(size2[1])
         ydata = Z
-        popt, pcov = opt.curve_fit(MNdens, xdata, ydata)
+
+        # xdata: R & z vals, ydata: rho vals; fit to MN density
+        popt, pcov = opt.curve_fit(self.disk_dens_MN, xdata, ydata)
+
+        # calculate fitted density & reshape to original shape
         z_fit = self.disk_dens_MN(xdata, *popt)
-        Z_fit = z_fit.reshape(size)
-        
+        rho_fit = z_fit.reshape(size)
+
+        # save scale sizes as self parameters
+        self.a_MND_kpc = popt[0]
+        self.b_MND_kpc = popt[1]
         '''
         plt.subplot(1, 2, 1)
         plt.title("Real Function")
@@ -170,7 +178,7 @@ class PA_routine:
         '''
         return(popt)
     
-    def v_circ_disk_MN(self, R_kpc, z_kpc, a_MND_kpc, b_MND_kpc, M_disk_stars_tot_10Msun):
+    def v_circ_disk_MN(self, R_kpc, z_kpc, M_disk_stars_tot_10Msun):
         """
         NAME:
             v_circ_disk_MN
@@ -187,7 +195,7 @@ class PA_routine:
         HISTORY:
             2018-07-27 - Written (Milanov, ESO)
         """
-        denom = (R_kpc**2 + (a_MND_kpc + np.sqrt(z_kpc**2 + b_MND_kpc**2))**2)**(3./2.)
+        denom = (R_kpc**2 + (self.a_MND_kpc + np.sqrt(z_kpc**2 + self.b_MND_kpc**2))**2)**(3./2.)
         v_circ_MNdisk_kms = R_kpc * np.sqrt(43.01e3* M_disk_stars_tot_10Msun / denom)
         return(v_circ_MNdisk_kms)        
     
@@ -651,7 +659,7 @@ class PA_routine:
     
 
 
-    def actions(self, pot_galpy, IDs, R0_kpc, v0_kms):
+    def actions(self, IDs, R0_kpc, v0_kms):
         # create a mask of all GCs which survive until the end
         gcmask = np.isin(s.id, IDs)
 
@@ -667,15 +675,16 @@ class PA_routine:
 
         # set up the actionAngleStaeckel object
         aAS = actionAngleStaeckel(
-                pot   = pot_galpy,  # potential
+                pot   = self.pot_galpy,  # potential
                 delta = delta,      # focal length of confocal coordinate system
                 c     = True        # use C code (for speed)
                 )
 
         jR_galpy, lz_galpy, jz_galpy = aAS(R_galpy, vR_galpy, vT_galpy, z_galpy, vz_galpy)
-        jR_kpckms, lz_kpckms, jz_kpckms = jR_galpy * R0_kpc * v0_kms, lz_galpy * R0_kpc * v0_kms, jz_galpy * R0_kpc * v0_kms
+        self.jR_kpckms, self.lz_kpckms, self.jz_kpckms = jR_galpy * R0_kpc * v0_kms, lz_galpy * R0_kpc * v0_kms, jz_galpy * R0_kpc * v0_kms
 
-        return(jR_kpckms, lz_kpckms, jz_kpckms)
+        IDsout = s.id[gcmask]
+        return(IDsout, jR_kpckms, lz_kpckms, jz_kpckms)
     
     def actions_cornerplot(self, jR_kpckms, lz_kpckms, jz_kpckms):
         data = np.vstack([jR_kpckms, lz_kpckms, jz_kpckms])
