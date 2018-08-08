@@ -11,7 +11,6 @@
             2018-0X-XX - Written (Milanov, ESO)
         """
 
-## import general modules
 import numpy as np
 from scipy import optimize as opt
 
@@ -22,7 +21,7 @@ from galpy.potential import evaluatePotentials, MiyamotoNagaiPotential, NFWPoten
 from auriga_basics import *
 from auriga_functions import *
 
-class potential:
+class PA_routine:
     def __init__(self, level, halo_number, snapnr, snappath, types = [1,2,3,4], haloid = 0, galradfac = 0.1, verbose = True):
         """
         NAME:
@@ -63,6 +62,7 @@ class potential:
             
         return None
       
+
     def disk_dens_data(self, R_kpc, z_kpc, dR_kpc, dz_kpc, M_disk_stars_10Msun): 
         """
         NAME:
@@ -80,7 +80,7 @@ class potential:
             Rbins_kpc: radial edges of bins in kpc
             zbins_kpc: vertical edges of bins in kpc
         HISTORY:
-            2018-0X-XX - Written (Milanov, ESO)
+            2018-08-08 - Written (Milanov, ESO)
         """
         Rmin_kpc, Rmax_kpc = np.min(R_kpc), np.max(R_kpc)
         zmin_kpc, zmax_kpc = np.min(z_kpc), np.max(z_kpc)
@@ -649,5 +649,37 @@ class potential:
         err = np.sum(((pot_kms2_data - pot_kms2_model) / pot_kms2_model)**2)
         return err
     
+
+
+    def actions(self, pot_galpy, IDs, R0_kpc, v0_kms):
+        # create a mask of all GCs which survive until the end
+        gcmask = np.isin(s.id, IDs)
+
+        # get position and velocities of all selected GCs & convert to galpy units
+        (R_kpc, phi_rad, z_kpc), (vR_kms, vphi_kms, vz_kms) = get_cylindrical_vectors(self.s, self.sf, gcmask)
+        # convert physical to galpy units by dividing by REF vals
+        R_galpy, vR_galpy, vT_galpy, z_galpy, vz_galpy = R_kpc / R0_kpc, vR_kms / v0_kms, vphi_kms / v0_kms, z_kpc / R0_kpc, vz_kms / v0_kms
+
+        # estimate Delta of the Staeckel potential
+        delta = 0.45
+        delta = estimateDeltaStaeckel(pot_galpy, R_galpy, z_galpy)
+        # CHECK HOW BIG INFLUENCE OF DELTA IS
+
+        # set up the actionAngleStaeckel object
+        aAS = actionAngleStaeckel(
+                pot   = pot_galpy,  # potential
+                delta = delta,      # focal length of confocal coordinate system
+                c     = True        # use C code (for speed)
+                )
+
+        jR_galpy, lz_galpy, jz_galpy = aAS(R_galpy, vR_galpy, vT_galpy, z_galpy, vz_galpy)
+        jR_kpckms, lz_kpckms, jz_kpckms = jR_galpy * R0_kpc * v0_kms, lz_galpy * R0_kpc * v0_kms, jz_galpy * R0_kpc * v0_kms
+
+        return(jR_kpckms, lz_kpckms, jz_kpckms)
     
+    def actions_cornerplot(self, jR_kpckms, lz_kpckms, jz_kpckms):
+        data = np.vstack([jR_kpckms, lz_kpckms, jz_kpckms])
+        labels = ['jR [kpc km/s]', 'lz [kpc km/s]', 'jz [kpc km/s]']
+        figure = corner.corner(data.transpose(), labels = labels, plot_contours = 1, color = color, range =  [(0.,12500.), (-14000.,14000.),(0., 5000.)])
+
     

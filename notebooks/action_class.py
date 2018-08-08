@@ -1,5 +1,57 @@
+        """
+        NAME:
+            
+        PURPOSE:
+            
+        INPUT:
+            
+        OUTPUT:
+            
+        HISTORY:
+            2018-0X-XX - Written (Milanov, ESO)
+        """
+
 class actions:
-    def __init__(self):
+    def __init__(self, level, halo_number, snapnr, snappath, types = [4], haloid = 0, galradfac = 0.1, verbose = True):
+        """
+        NAME:
+            __init__
+        PURPOSE:
+            initialize a potential object for a snapshot
+        INPUT:
+            level       = level of the Auriga simulation (3=high, 4='normal' or 5=low).
+                          Level 3/5 only for halo 6, 16 and 24
+            halo_number = Number of simulation
+            snapnr      = Number of snap in [0:127]
+            snappath    = path where to find the snapshot data
+            types       = list of types ( 0: gas, 1-3: DM (halo/disk/bulge), 4: stars, 5: BHs)
+                          default: stars 
+            haloid      = the ID of the SubFind halo; default = 0
+            galradfac   = the radius of the galaxy is often used to make cuts in
+                          the (star) particles. It seems that in general galrad is set to 10%
+                          of the virial radius R20
+        OUTPUT:
+            instance
+        HISTORY:
+            2018-08-08 - Written (Milanov, ESO)
+        """
+        
+        try:
+            self.s, self.sf = eat_snap_and_fof(level, halo_number, snapnr, snappath, loadonlytype= types, 
+            haloid=haloid, galradfac=galradfac, verbose=verbose)    
+        except KeyError:
+            print('\n\n', snapnr, 'not read in.\n\n')
+            continue
+            
+        try: 
+            # Clean negative and zero values of gmet to avoid RuntimeErrors
+            # later on (e.g. dividing by zero)
+            self.s.data['gmet'] = np.maximum( self.s.data['gmet'], 1e-40 )
+        except:
+            continue
+            
+        return None
+      
         
     def setup_galpy_potential(self, a_MND_kpc, b_MND_kpc, a_NFWH_kpc, a_HB_kpc, n_MND, n_NFWH, n_HB):
 
@@ -29,14 +81,15 @@ class actions:
         bulge = HernquistPotential(
                     a = a_HB,
                     normalize = n_HB)
+        
         return [disk, halo, bulge]
 
-    def actions(self, s, sf, pot_galpy, IDs, R0_kpc, v0_kms):
+    def actions(self, pot_galpy, IDs, R0_kpc, v0_kms):
         # create a mask of all GCs which survive until the end
         gcmask = np.isin(s.id, IDs)
 
         # get position and velocities of all selected GCs & convert to galpy units
-        (R_kpc, phi_rad, z_kpc), (vR_kms, vphi_kms, vz_kms) = get_cylindrical_vectors(s, sf, gcmask)
+        (R_kpc, phi_rad, z_kpc), (vR_kms, vphi_kms, vz_kms) = get_cylindrical_vectors(self.s, self.sf, gcmask)
         # convert physical to galpy units by dividing by REF vals
         R_galpy, vR_galpy, vT_galpy, z_galpy, vz_galpy = R_kpc / R0_kpc, vR_kms / v0_kms, vphi_kms / v0_kms, z_kpc / R0_kpc, vz_kms / v0_kms
 
