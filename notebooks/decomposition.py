@@ -15,6 +15,8 @@ from galpy.potential import MiyamotoNagaiPotential, NFWPotential, HernquistPoten
 
 import numpy as np
 
+from scipy import stats
+
 from astropy import units as u
 
 from matplotlib import pyplot as plt
@@ -45,7 +47,7 @@ class decomposition():
 		print('Calculate spheroid indices.')
 		self._get_spheroid_indices()
 		print('Load positions and masses of simulation data.')
-		self._get_positions()
+		self._get_disk_positions()
 		self._get_masses()
 		print('Import galpy parameters.')
 		self._get_galpy_parameters()
@@ -265,18 +267,27 @@ class decomposition():
 	def _get_spheroid_indices(self):
 		self.i_spher = np.isin(self.s.id, self.spheroid_IDs)
 
-	def _get_positions(self):
+	def _get_disk_positions(self):
 		self.r_kpc = 1000. * self.s.r()[self.i_disk]
 		self.x_kpc = 1000. * self.s.pos[:, 2][self.i_disk]
 		self.y_kpc = 1000. * self.s.pos[:, 1][self.i_disk]
 		self.z_kpc = 1000. * self.s.pos[:, 0][self.i_disk]
 		self.R_kpc = np.sqrt(self.x_kpc**2 + self.y_kpc**2)
+
+
 		# keep it within galrad
 		self.i_r_in = self.r_kpc <= (1000. * self.s.galrad)
 	 
 		# keep it within zmin - zmax range
 		self.i_z_in = (self.z_kpc >= -5.) * (self.z_kpc <= 5.)
 
+	def _get_circ_stars_pos_vel(self):
+		self.i_disk_circ = self._decomp(circ_val = 0.9, include_zmax = True)
+		(self.R_circ_stars_kpc, self.phi_circ_stars_, self.z_circ_stars_kpc), (self.vR_circ_stars_kms, self.vphi_circ_stars_kms, self.vz_circ_stars_kms) = get_cylindrical_vectors(self.s, self.sf, self.i_disk_circ)
+		self.r_circ_stars_kpc = 1000. * self.s.r()[self.i_disk_circ]
+		self.i_r_circ_stars_in = r_circ_stars_kpc <= (1000. * self.s.galrad)
+
+		
 	def _get_masses(self):
 		self.masses_10msun = self.s.mass[self.i_disk][self.i_r_in * self.i_z_in]
 
@@ -296,14 +307,29 @@ class decomposition():
 
 		return(surfdens_bestfit)
 
-	def circvel_galpy(self):
-		pass
+	def circvel_galpy(self, R_bins_kpc, N = 25):
+		vcirc_disk_bestfit_kms  = np.zeros(N)
+		vcirc_spher_bestfit_kms = np.zeros(N)
+		vcirc_halo_bestfit_kms  = np.zeros(N)
+		vcirc_tot_bestfit_kms   = np.zeros(N)
+		
+		for i, item in enumerate(R_bins_kpc):
+			vcirc_disk_bestfit_kms[i]  = self.disk.vcirc(item*u.kpc)		
+			vcirc_halo_bestfit_kms[i]  = self.halo.vcirc(item*u.kpc)	
+			vcirc_spher_bestfit_kms[i] = self.bulge.vcirc(item*u.kpc)	
+			vcirc_tot_bestfit_kms[i]   = self.pot.vcirc(item*u.kpc)
+
+		return(vcirc_tot_bestfit_kms, vcirc_disk_bestfit_kms, vcirc_spher_bestfit_kms, vcirc_halo_bestfit_kms)
 
 	def voldens_galpy(self):
 		pass
 
-	def circvel_data(self):
-		pass
+	def circvel_data(self, N = 25):
+		v_mean_kms, R_bin_edges, binnum = stats.binned_statistic(self.R_circ_stars_kpc[self.i_r_circ_stars_in], np.abs(self.vphi_circ_stars_kms[self.i_r_circ_stars_in]), bins = N)
+		R_bins_kpc = R_bin_edges[:-1] + 1./2. * (R_bin_edges[1:] - R_bin_edges[:-1])
+		return(v_mean_kms, R_bins_kpc)
+
+		
 	def voldens_data(self):
 		pass
 
@@ -320,8 +346,24 @@ class decomposition():
 		fig.savefig(self.plotdir + 'surface_dens_disk_fit_data.png', dpi = 300, format = 'png' )
 		plt.show()
 
-	def plot_cirvel(self):
-		pass
+	def plot_cirvel(self, N = 25):
+		v_mean_kms, R_bins_kpc = self.circvel_data(N)
+		vcirc_tot_bestfit_kms, vcirc_disk_bestfit_kms, vcirc_spher_bestfit_kms, vcirc_halo_bestfit_kms = self.circvel_galpy(R_bins_kpc, N)
+
+		fig,ax = plt.subplots(figsize = (8,8))
+		ax.plot(R_bins_kpc, v_mean_kms, 'k.', label = 'data')
+		ax.plot(R_bins_kpc, vcirc_tot_bestfit_kms, 'r-', label = 'fit total')
+		ax.plot(R_bins_kpc, vcirc_disk_bestfit_kms, 'b--', label = 'fit disk')
+		ax.plot(R_bins_kpc, vcirc_spher_bestfit_kms, 'g-.', label = 'fit spheroid')
+		ax.plot(R_bins_kpc, vcirc_halo_bestfit_kms, 'y-.-', label = 'fit halo')
+		ax.set_ylabel('circular velocity [km s$^{-1}$]', fontsize = 20)
+		ax.set_xlabel('R [kpc]', fontsize = 20)
+		ax.legend()
+		fig.tight_layout()
+		fig.savefig(self.plotdir + 'circ_vel_fit_data.png', dpi = 300, format = 'png' )
+		plt.show()
+
+		
 	def plot_voldens(self):
 		pass
 		
