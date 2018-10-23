@@ -113,7 +113,7 @@ class decomposition():
 		a_NFWH = self.a_NFWH_kpc / self.R0_kpc
 		a_HB   = self.a_HB_kpc   / self.R0_kpc
         
-		nfw_mass = np.sum(self.s.mass[((self.s.type == 1) + (self.s.type == 2) + (self.s.type == 3)) * (self.s.r()<=self.s.galrad)])* 1e10 * u.Msun
+		nfw_mass = np.sum(self.s.mass[((self.s.type == 1) + (self.s.type == 2) + (self.s.type == 3)) * (self.s.r()<=self.s.galrad) ])* 1e10 * u.Msun #* (self.s.r()<=self.s.galrad)
 		hb_mass = 10**10*np.sum(self.s.mass[self.i_spher][self.s.r()[self.i_spher] <= self.s.galrad])*u.Msun
 		#setup potential:
 		self.disk = MiyamotoNagaiPotential(amp=10**10*np.sum(self.s.mass[self.i_disk][self.i_r_in])*u.Msun,
@@ -283,7 +283,7 @@ class decomposition():
 		self.i_z_in = (self.z_kpc >= -5.) * (self.z_kpc <= 5.)
 
 	def _get_circ_stars_pos_vel(self):
-		self.i_disk_circ = self._decomp(circ_val = 0.9, include_zmax = True)
+		self.i_disk_circ = self._decomp(circ_val = 0.9, include_zmax = True, zmax = 0.005)
 		(self.R_circ_stars_kpc, self.phi_circ_stars_, self.z_circ_stars_kpc), (self.vR_circ_stars_kms, self.vphi_circ_stars_kms, self.vz_circ_stars_kms) = get_cylindrical_vectors(self.s, self.sf, self.i_disk_circ)
 		self.r_circ_stars_kpc = 1000. * self.s.r()[self.i_disk_circ]
 		self.i_r_circ_stars_in = self.r_circ_stars_kpc <= (1000. * self.s.galrad)
@@ -334,7 +334,7 @@ class decomposition():
 	def voldens_data(self):
 		pass
 
-	def plot_surfdens(self, N = 25):
+	def plot_surfdens(self, N = 25, safefigure = True):
 		surfdens_data_Msun_pc2_data, R_bins_kpc = self.surfdens_data(N)
 		surfdens_bestfit_Msun_pc2 = self.surfdens_galpy(R_bins_kpc)
 		fig,ax = plt.subplots(figsize = (8,8))
@@ -344,10 +344,11 @@ class decomposition():
 		ax.set_xlabel('R [kpc]', fontsize = 22)
 		ax.legend()
 		fig.tight_layout()
-		fig.savefig(self.plotdir + 'surface_dens_disk_fit_data.png', dpi = 300, format = 'png' )
+		if safefigure == True:
+			fig.savefig(self.plotdir + 'surface_dens_disk_fit_data.png', dpi = 300, format = 'png' )
 		plt.show()
 
-	def plot_circvel(self, N = 25):
+	def plot_circvel(self, N = 25, safefigure = True):
 		v_mean_kms, R_bins_kpc = self.circvel_data(N)
 		vcirc_tot_bestfit_kms, vcirc_disk_bestfit_kms, vcirc_spher_bestfit_kms, vcirc_halo_bestfit_kms = self.circvel_galpy(R_bins_kpc, N)
 
@@ -356,16 +357,17 @@ class decomposition():
 		ax.plot(R_bins_kpc, vcirc_tot_bestfit_kms, 'r-', label = 'fit total')
 		ax.plot(R_bins_kpc, vcirc_disk_bestfit_kms, 'b--', label = 'fit disk')
 		ax.plot(R_bins_kpc, vcirc_spher_bestfit_kms, 'g-.', label = 'fit spheroid')
-		ax.plot(R_bins_kpc, vcirc_halo_bestfit_kms, 'y-.-', label = 'fit halo')
+		ax.plot(R_bins_kpc, vcirc_halo_bestfit_kms, 'y:', label = 'fit halo')
 		ax.set_ylabel('circular velocity [km s$^{-1}$]', fontsize = 20)
 		ax.set_xlabel('R [kpc]', fontsize = 20)
 		ax.legend()
 		fig.tight_layout()
-		fig.savefig(self.plotdir + 'circ_vel_fit_data.png', dpi = 300, format = 'png' )
+		if safefigure == True:
+			fig.savefig(self.plotdir + 'circ_vel_fit_data.png', dpi = 300, format = 'png' )
 		plt.show()
 
 		
-	def plot_voldens(self):
+	def plot_voldens(self, safefigure = True):
 		pass
 		
 
