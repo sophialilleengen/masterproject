@@ -12,7 +12,7 @@ from areposnap.gadget_subfind import load_subfind
 from auriga_basics import *
 
 from galpy.potential import MiyamotoNagaiPotential, NFWPotential, HernquistPotential
-
+from galpy.plotRotcurve import vcirc
 import numpy as np
 
 from scipy import stats
@@ -318,7 +318,7 @@ class decomposition():
 			vcirc_disk_bestfit_kms[i]  = self.disk.vcirc(item*u.kpc)		
 			vcirc_halo_bestfit_kms[i]  = self.halo.vcirc(item*u.kpc)	
 			vcirc_spher_bestfit_kms[i] = self.bulge.vcirc(item*u.kpc)	
-			vcirc_tot_bestfit_kms[i]   = self.pot.vcirc(item*u.kpc)
+			vcirc_tot_bestfit_kms[i]   = vcirc(self.pot, item*u.kpc)
 
 		return(vcirc_tot_bestfit_kms, vcirc_disk_bestfit_kms, vcirc_spher_bestfit_kms, vcirc_halo_bestfit_kms)
 
