@@ -12,7 +12,7 @@ from areposnap.gadget_subfind import load_subfind
 from auriga_basics import *
 
 from galpy.potential import MiyamotoNagaiPotential, NFWPotential, HernquistPotential
-from galpy.plotRotcurve import vcirc
+from galpy.potential.plotRotcurve import vcirc
 import numpy as np
 
 from scipy import stats
