@@ -35,11 +35,7 @@ class decomposition():
 			self.plotdir = "/Users/smilanov/Documents/masterthesis/auriga_files/plots/"
 		else:
 			raise NotADirectoryError
-
-		print('Import galpy parameters.')
-		self._get_galpy_parameters()
-		print("Setup galpy potential.")
-		self._setup_galpy_potential()
+            
 		print('Load snapshot.')
 		self._load_snapshot()
 		print("Carry out decomposition.")
@@ -51,6 +47,10 @@ class decomposition():
 		print('Load positions and masses of simulation data.')
 		self._get_positions()
 		self._get_masses()
+		print('Import galpy parameters.')
+		self._get_galpy_parameters()
+		print("Setup galpy potential.")
+		self._setup_galpy_potential()
 
 
 	def _get_galpy_parameters(self, inputfile = None):
@@ -86,7 +86,7 @@ class decomposition():
 				print("basedir : {0}".format(self.basedir))
 				print("halodir : {0}".format(halodir))
 				print("snappath: {0}\n".format(snappath))
-				self.s, self.sf = eat_snap_and_fof(level, halo_number, snapnr, snappath, loadonlytype=[4], 
+				self.s, self.sf = eat_snap_and_fof(level, halo_number, snapnr, snappath, loadonlytype=[1,2,3,4], 
 					haloid=0, galradfac=0.1, verbose=True) 
 
 				# Clean negative and zero values of gmet to avoid RuntimeErrors
@@ -109,24 +109,21 @@ class decomposition():
 		b_MND  = self.b_MND_kpc  / self.R0_kpc
 		a_NFWH = self.a_NFWH_kpc / self.R0_kpc
 		a_HB   = self.a_HB_kpc   / self.R0_kpc
-		
+        
+		nfw_mass = np.sum(self.s.mass[((self.s.type == 1) + (self.s.type == 2) + (self.s.type == 3)) * (self.s.r()<=self.s.galrad)])* 1e10 * u.Msun
+		hb_mass = 10**10*np.sum(self.s.mass[self.i_spher][self.s.r()[self.i_spher] <= self.s.galrad])*u.Msun
 		#setup potential:
-		self.disk = MiyamotoNagaiPotential(
-					a = a_MND,
-					b = b_MND,
-					normalize = self.n_MND)
-		self.halo = NFWPotential(
-					a = a_NFWH,
-					normalize = self.n_NFWH)
-		self.bulge = HernquistPotential(
-					a = a_HB,
-					normalize = self.n_HB) 
+		self.disk = MiyamotoNagaiPotential(amp=10**10*np.sum(self.s.mass[self.i_disk][self.i_r_in])*u.Msun,
+                                           a=self.a_MND_kpc*u.kpc, b=self.b_MND_kpc*u.kpc,)
+		self.halo = NFWPotential(amp = nfw_mass, a = self.a_NFWH_kpc*u.kpc)
+		self.bulge = HernquistPotential(amp=hb_mass,
+                                        a = self.a_HB_kpc) 
 		 
-		self.pot = [disk,halo,bulge]
+		self.pot = [self.disk,self.halo,self.bulge]
 		#return [disk,halo,bulge], disk, halo, bulge
 
 
-	def _decomp(self, circ_val = 0.7, plotter = False, include_zmax = False, zmax = 0.0005):
+	def _decomp(self, circ_val = 0.7, plotter = False, include_zmax = False, zmax = 0.0005, Gcosmo = 43.0071):
 		ID = self.s.id
 		# get number of particle 
 		na = self.s.nparticlesall
@@ -139,8 +136,8 @@ class decomposition():
 		age[st:en] = self.s.data['age']
 
 		# create masks for all particles / stars within given radius
-		iall, = np.where( (self.s.r() < galrad) & (self.s.r() > 0.) )
-		istars, = np.where( (self.s.r() < galrad) & (self.s.r() > 0.) & (self.s.type == 4) & (age > 0.) )
+		iall, = np.where( (self.s.r() < self.s.galrad) & (self.s.r() > 0.) )
+		istars, = np.where( (self.s.r() < self.s.galrad) & (self.s.r() > 0.) & (self.s.type == 4) & (age > 0.) )
 
 		# calculate radius of all particles within galrad, sort them, \
 		# get their mass and calculate their cumulative mass sorted by their distance
@@ -295,7 +292,7 @@ class decomposition():
 
 		surfdens_bestfit = np.zeros(len(R_bins_kpc))
 		for i, item in enumerate(R_bins_kpc):
-			surfdens_bestfit[i] = MNpot.surfdens(item * u.kpc, z_extend_kpc * u.kpc) 
+			surfdens_bestfit[i] = self.disk.surfdens(item * u.kpc, z_extend_kpc * u.kpc) 
 
 		return(surfdens_bestfit)
 
@@ -312,7 +309,7 @@ class decomposition():
 
 	def plot_surfdens(self, N = 25):
 		surfdens_data_Msun_pc2_data, R_bins_kpc = self.surfdens_data(N)
-		surfdens_bestfit_Msun_pc2 = self.surfdens_bestfit(R_bins_kpc)
+		surfdens_bestfit_Msun_pc2 = self.surfdens_galpy(R_bins_kpc)
 		fig,ax = plt.subplots(figsize = (8,8))
 		ax.plot(R_bins_kpc, surfdens_data_Msun_pc2_data, 'k.', label = 'data')
 		ax.plot(R_bins_kpc, surfdens_bestfit_Msun_pc2, 'r-', label = 'best fit')
