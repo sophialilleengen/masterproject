@@ -286,7 +286,7 @@ class decomposition():
 		self.i_disk_circ = self._decomp(circ_val = 0.9, include_zmax = True)
 		(self.R_circ_stars_kpc, self.phi_circ_stars_, self.z_circ_stars_kpc), (self.vR_circ_stars_kms, self.vphi_circ_stars_kms, self.vz_circ_stars_kms) = get_cylindrical_vectors(self.s, self.sf, self.i_disk_circ)
 		self.r_circ_stars_kpc = 1000. * self.s.r()[self.i_disk_circ]
-		self.i_r_circ_stars_in = r_circ_stars_kpc <= (1000. * self.s.galrad)
+		self.i_r_circ_stars_in = self.r_circ_stars_kpc <= (1000. * self.s.galrad)
 
 		
 	def _get_masses(self):
