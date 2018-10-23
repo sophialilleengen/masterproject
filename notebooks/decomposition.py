@@ -49,6 +49,7 @@ class decomposition():
 		print('Load positions and masses of simulation data.')
 		self._get_disk_positions()
 		self._get_masses()
+		self._get_circ_stars_pos_vel()
 		print('Import galpy parameters.')
 		self._get_galpy_parameters()
 		print("Setup galpy potential.")
@@ -346,7 +347,7 @@ class decomposition():
 		fig.savefig(self.plotdir + 'surface_dens_disk_fit_data.png', dpi = 300, format = 'png' )
 		plt.show()
 
-	def plot_cirvel(self, N = 25):
+	def plot_circvel(self, N = 25):
 		v_mean_kms, R_bins_kpc = self.circvel_data(N)
 		vcirc_tot_bestfit_kms, vcirc_disk_bestfit_kms, vcirc_spher_bestfit_kms, vcirc_halo_bestfit_kms = self.circvel_galpy(R_bins_kpc, N)
 
