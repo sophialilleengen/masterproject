@@ -285,9 +285,9 @@ class decomposition():
 
 	def surfdens_data(self, N = 25):
 		mass_hist, R_bin_edges = np.histogram(self.R_kpc[self.i_r_in * self.i_z_in], weights = self.masses_10msun, bins = N)
-    	area = np.pi * (R_bin_edges[1:]**2 - R_bin_edges[:-1]**2)
-    	rho_Msun_pc2 = 1e4 * mass_hist / area
-    	R_mean_kpc = R_bin_edges[:-1] + 1./2. * (R_bin_edges[1:] - R_bin_edges[:-1])
+		area = np.pi * (R_bin_edges[1:]**2 - R_bin_edges[:-1]**2)
+		rho_Msun_pc2 = 1e4 * mass_hist / area
+		R_mean_kpc = R_bin_edges[:-1] + 1./2. * (R_bin_edges[1:] - R_bin_edges[:-1])
 
 		return(rho_Msun_pc2, R_mean_kpc)
 
@@ -313,15 +313,15 @@ class decomposition():
 	def plot_surfdens(self, N = 25):
 		surfdens_data_Msun_pc2_data, R_bins_kpc = self.surfdens_data(N)
 		surfdens_bestfit_Msun_pc2 = self.surfdens_bestfit(R_bins_kpc)
-	    fig,ax = plt.subplots(figsize = (8,8))
-	    ax.plot(R_bins_kpc, surfdens_data_Msun_pc2_data, 'k.', label = 'data')
-	    ax.plot(R_bins_kpc, surfdens_bestfit_Msun_pc2, 'r-', label = 'best fit')
-	    ax.set_ylabel('surface density [$M_{\{odot}} / pc^2$]', fontsize = 22)
-	    ax.set_xlabel('R [kpc]', fontsize = 22)
-	    ax.legend()
-	    fig.tight_layout()
+		fig,ax = plt.subplots(figsize = (8,8))
+		ax.plot(R_bins_kpc, surfdens_data_Msun_pc2_data, 'k.', label = 'data')
+		ax.plot(R_bins_kpc, surfdens_bestfit_Msun_pc2, 'r-', label = 'best fit')
+		ax.set_ylabel('surface density [$M_{\{odot}} / pc^2$]', fontsize = 22)
+		ax.set_xlabel('R [kpc]', fontsize = 22)
+		ax.legend()
+		fig.tight_layout()
 		fig.savefig(self.plotdir + 'surface_dens_disk_fit_data.png', dpi = 300, format = 'png' )
-	    plt.show()
+		plt.show()
 
 	def plot_cirvel(self):
 		pass
