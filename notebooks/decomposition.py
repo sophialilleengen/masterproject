@@ -24,7 +24,7 @@ from matplotlib import pyplot as plt
 
 
 class decomposition():
-	def __init__(self, machine = 'magny'):
+	def __init__(self, machine = 'magny', use_masses = False, use_n = True):
 		self.machine = machine
 
 		if self.machine == 'magny':
@@ -41,7 +41,7 @@ class decomposition():
 		print('Load snapshot.')
 		self._load_snapshot()
 		print("Carry out decomposition.")
-		self._decomp()
+		self.disk_IDs, self.spheroid_IDs = self._decomp()
 		print('Calculate disk indices.')
 		self._get_disk_indices()
 		print('Calculate spheroid indices.')
@@ -53,7 +53,7 @@ class decomposition():
 		print('Import galpy parameters.')
 		self._get_galpy_parameters()
 		print("Setup galpy potential.")
-		self._setup_galpy_potential()
+		self._setup_galpy_potential(use_masses, use_n)
 
 
 	def _get_galpy_parameters(self, inputfile = None):
@@ -97,7 +97,7 @@ class decomposition():
 				self.s.data['gmet'] = np.maximum( self.s.data['gmet'], 1e-40 )
 
 #_____function that sets-up galpy potential_____
-	def _setup_galpy_potential(self):
+	def _setup_galpy_potential(self, use_masses = False, use_n = True):
 		#test input:
 		if (self.a_MND_kpc <= 0.) or (self.b_MND_kpc <= 0.) or (self.a_NFWH_kpc <= 0.) or (self.a_HB_kpc <= 0.) \
 		   or (self.n_MND <= 0.) or (self.n_NFWH <= 0.) or (self.n_HB <= 0.) or (self.n_MND >= 1.) or (self.n_NFWH >= 1.) or (self.n_HB >= 1.):
@@ -113,15 +113,20 @@ class decomposition():
 		a_NFWH = self.a_NFWH_kpc / self.R0_kpc
 		a_HB   = self.a_HB_kpc   / self.R0_kpc
         
-		nfw_mass = np.sum(self.s.mass[((self.s.type == 1) + (self.s.type == 2) + (self.s.type == 3)) * (self.s.r()<=self.s.galrad) ])* 1e10 * u.Msun #* (self.s.r()<=self.s.galrad)
-		hb_mass = 10**10*np.sum(self.s.mass[self.i_spher][self.s.r()[self.i_spher] <= self.s.galrad])*u.Msun
-		#setup potential:
-		self.disk = MiyamotoNagaiPotential(amp=10**10*np.sum(self.s.mass[self.i_disk][self.i_r_in])*u.Msun,
-                                           a=self.a_MND_kpc*u.kpc, b=self.b_MND_kpc*u.kpc,)
-		self.halo = NFWPotential(amp = nfw_mass, a = self.a_NFWH_kpc*u.kpc)
-		self.bulge = HernquistPotential(amp=hb_mass,
-                                        a = self.a_HB_kpc) 
-		 
+		if use_masses == True:
+			nfw_mass = np.sum(self.s.mass[((self.s.type == 1) + (self.s.type == 2) + (self.s.type == 3)) * (self.s.halo == 0) * (self.s.subhalo == 0)])* 1e10 * u.Msun #* (self.s.r()<=self.s.galrad)
+			hb_mass = 10**10*np.sum(self.s.mass[self.i_spher][self.s.r()[self.i_spher] <= self.s.galrad])*u.Msun
+			#setup potential:
+			self.disk = MiyamotoNagaiPotential(amp=10**10*np.sum(self.s.mass[self.i_disk][self.i_r_in])*u.Msun,
+                                               a=self.a_MND_kpc*u.kpc, b=self.b_MND_kpc*u.kpc,)
+			self.halo = NFWPotential(amp = nfw_mass, a = self.a_NFWH_kpc*u.kpc)
+			self.bulge = HernquistPotential(amp=hb_mass, a = self.a_HB_kpc*u.kpc) 
+            
+		elif use_n == True:
+			self.disk = MiyamotoNagaiPotential(a=a_MND, b=b_MND,normalize = self.n_MND)
+			self.halo = NFWPotential(a = a_NFWH, normalize=self.n_NFWH)
+			self.bulge = HernquistPotential(a = a_HB, normalize = self.n_HB)         
+		else: print('Please use either n or masses.')        
 		self.pot = [self.disk,self.halo,self.bulge]
 		#return [disk,halo,bulge], disk, halo, bulge
 
@@ -258,9 +263,7 @@ class decomposition():
 			ax.set_xlabel('$\epsilon$')
 			plt.show()
 			
-		self.disk_IDs	  = disk_ID
-		self.spheroid_IDs = spheroid_ID
-
+		return(disk_ID, spheroid_ID)    
 
 	def _get_disk_indices(self):
 		self.i_disk = np.isin(self.s.id, self.disk_IDs)
@@ -283,7 +286,8 @@ class decomposition():
 		self.i_z_in = (self.z_kpc >= -5.) * (self.z_kpc <= 5.)
 
 	def _get_circ_stars_pos_vel(self):
-		self.i_disk_circ = self._decomp(circ_val = 0.9, include_zmax = True, zmax = 0.005)
+		self.ID_disk_circ, self.ID_spher_circ = self._decomp(circ_val = 0.9, include_zmax = True, zmax = 0.005)
+		self.i_disk_circ= np.isin(self.s.id, self.ID_disk_circ)
 		(self.R_circ_stars_kpc, self.phi_circ_stars_, self.z_circ_stars_kpc), (self.vR_circ_stars_kms, self.vphi_circ_stars_kms, self.vz_circ_stars_kms) = get_cylindrical_vectors(self.s, self.sf, self.i_disk_circ)
 		self.r_circ_stars_kpc = 1000. * self.s.r()[self.i_disk_circ]
 		self.i_r_circ_stars_in = self.r_circ_stars_kpc <= (1000. * self.s.galrad)
@@ -331,8 +335,21 @@ class decomposition():
 		return(v_mean_kms, R_bins_kpc)
 
 		
-	def voldens_data(self):
-		pass
+	def voldens_data(self, z_kpc = None, R_kpc = None):
+		if z_kpc is not None:
+			mass_hist, R_bin_edges = np.histogram(self.R_kpc[self.i_r_in], weights = self.s.mass[self.i_disk][self.i_r_in], bins = N)
+			volume = np.pi * (R_bin_edges[1:]**2 - R_bin_edges[:-1]**2) * z_kpc
+			rho_Msun_pc3 = 10. * mass_hist / volume
+			R_mean_kpc = R_bin_edges[:-1] + 1./2. * (R_bin_edges[1:] - R_bin_edges[:-1])
+			return(rho_Msun_pc3, R_mean_kpc)
+		elif R_kpc is not None:
+			mass_hist, z_bin_edges = np.histogram(self.R_kpc[self.i_r_in], weights = self.s.mass[self.i_disk][self.i_r_in], bins = N)
+			z_mean_kpc = z_bin_edges[:-1] + 1./2. * (z_bin_edges[1:] - z_bin_edges[:-1])
+			volume = np.pi * R_kpc**2 * z_mean_kpc
+			rho_Msun_pc3 = 10. * mass_hist / volume
+			return(rho_Msun_pc3, z_mean_kpc)
+		else:print('Please specify z OR R [kpc].')
+
 
 	def plot_surfdens(self, N = 25, safefigure = True):
 		surfdens_data_Msun_pc2_data, R_bins_kpc = self.surfdens_data(N)
@@ -360,17 +377,27 @@ class decomposition():
 		ax.plot(R_bins_kpc, vcirc_halo_bestfit_kms, 'y:', label = 'fit halo')
 		ax.set_ylabel('circular velocity [km s$^{-1}$]', fontsize = 20)
 		ax.set_xlabel('R [kpc]', fontsize = 20)
-		ax.legend()
+		ax.legend(loc = 4)
 		fig.tight_layout()
 		if safefigure == True:
-			fig.savefig(self.plotdir + 'circ_vel_fit_data.png', dpi = 300, format = 'png' )
+			fig.savefig(self.plotdir + 'circ_vel_fit_data_test.png', dpi = 300, format = 'png' )
 		plt.show()
 
 		
 	def plot_voldens(self, safefigure = True):
 		pass
-		
-
+		voldens_data_Msun_pc3_data, R_bins_kpc = self.voldens_data(N)
+		voldens_bestfit_Msun_pc3 = self.voldens_galpy(R_bins_kpc)
+		fig,ax = plt.subplots(figsize = (8,8))
+		ax.plot(R_bins_kpc, voldens_data_Msun_pc3_data, 'k.', label = 'data')
+		ax.plot(R_bins_kpc, voldens_bestfit_Msun_pc3, 'r-', label = 'best fit')
+		ax.set_ylabel('volume density [$M_\odot pc^{-3}$]', fontsize = 22)
+		ax.set_xlabel('R [kpc]', fontsize = 22)
+		ax.legend()
+		fig.tight_layout()
+		if safefigure == True:
+			fig.savefig(self.plotdir + 'volume_dens_disk_fit_data.png', dpi = 300, format = 'png' )
+		plt.show()
 
 
 
