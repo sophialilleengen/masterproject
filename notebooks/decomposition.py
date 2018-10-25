@@ -13,6 +13,7 @@ from auriga_basics import *
 
 from galpy.potential import MiyamotoNagaiPotential, NFWPotential, HernquistPotential
 from galpy.potential.plotRotcurve import vcirc
+from galpy.util import bovy_conversion
 import numpy as np
 
 from scipy import stats
@@ -304,38 +305,59 @@ class decomposition():
 
 		return(rho_Msun_pc2, R_mean_kpc)
 
-	def surfdens_galpy(self, R_bins_kpc, z_extend_kpc = 5.):
+	def surfdens_galpy(self, R_bins_kpc, z_extend_kpc = 5., use_masses = False, use_n = True):
 
 		surfdens_bestfit = np.zeros(len(R_bins_kpc))
-		for i, item in enumerate(R_bins_kpc):
-			surfdens_bestfit[i] = self.disk.surfdens(item * u.kpc, z_extend_kpc * u.kpc) 
+		if use_masses == True:
+			for i, item in enumerate(R_bins_kpc):
+				surfdens_bestfit[i] = self.disk.surfdens(item * u.kpc, z_extend_kpc * u.kpc) 
+		elif use_n == True:
+			for i, item in enumerate(R_bins_kpc):
+				item_galpy = item / self.R0_kpc
+				z_extend_galpy = z_extend_kpc / self.R0_kpc
+				surfdens_bestfit[i] = self.disk.surfdens(item_galpy, z_extend_galpy) * bovy_conversion.surfdens_in_msolpc2(self.v0_tot_kms, self.R0_kpc)
 
 		return(surfdens_bestfit)
 
-	def circvel_galpy(self, R_bins_kpc, N = 25):
+	def circvel_galpy(self, R_bins_kpc, N = 25, use_masses = False, use_n = True):
 		vcirc_disk_bestfit_kms  = np.zeros(N)
 		vcirc_spher_bestfit_kms = np.zeros(N)
 		vcirc_halo_bestfit_kms  = np.zeros(N)
 		vcirc_tot_bestfit_kms   = np.zeros(N)
-		
-		for i, item in enumerate(R_bins_kpc):
-			vcirc_disk_bestfit_kms[i]  = self.disk.vcirc(item*u.kpc)		
-			vcirc_halo_bestfit_kms[i]  = self.halo.vcirc(item*u.kpc)	
-			vcirc_spher_bestfit_kms[i] = self.bulge.vcirc(item*u.kpc)	
-			vcirc_tot_bestfit_kms[i]   = vcirc(self.pot, item*u.kpc)
-
+		if use_masses == True:
+			for i, item in enumerate(R_bins_kpc):
+				vcirc_disk_bestfit_kms[i]  = self.disk.vcirc(item*u.kpc)		
+				vcirc_halo_bestfit_kms[i]  = self.halo.vcirc(item*u.kpc)	
+				vcirc_spher_bestfit_kms[i] = self.bulge.vcirc(item*u.kpc)	
+				vcirc_tot_bestfit_kms[i]   = vcirc(self.pot, item*u.kpc)
+		elif use_n == True:
+			for i, item in enumerate(R_bins_kpc):
+				item_galpy = item / self.R0_kpc
+				vcirc_disk_bestfit_kms[i]  = self.disk.vcirc(item_galpy)*self.v0_tot_kms		
+				vcirc_halo_bestfit_kms[i]  = self.halo.vcirc(item_galpy)*self.v0_tot_kms	
+				vcirc_spher_bestfit_kms[i] = self.bulge.vcirc(item_galpy)*self.v0_tot_kms	
+				vcirc_tot_bestfit_kms[i]   = vcirc(self.pot, item_galpy)*self.v0_tot_kms
 		return(vcirc_tot_bestfit_kms, vcirc_disk_bestfit_kms, vcirc_spher_bestfit_kms, vcirc_halo_bestfit_kms)
 
-	def voldens_galpy(self):
-		pass
+	def voldens_galpy(self, R_bins_kpc, z_extend_kpc = 5., use_masses = False, use_n = True):
+		surfdens_bestfit = np.zeros(len(R_bins_kpc))
+		if use_masses == True:
+			for i, item in enumerate(R_bins_kpc):
+				surfdens_bestfit[i] = self.disk.surfdens(item * u.kpc, z_extend_kpc * u.kpc) 
+		elif use_n == True:
+			for i, item in enumerate(R_bins_kpc):
+				item_galpy = item / self.R0_kpc
+				z_extend_galpy = item / self.R0_kpc
+				surfdens_bestfit[i] = self.disk.surfdens(item_galpy, z_extend_galpy) * bovy_conversion.surfdens_in_msolpc2(self.v0_tot_kms, self.R0_kpc)
 
+		return(surfdens_bestfit)
 	def circvel_data(self, N = 25):
 		v_mean_kms, R_bin_edges, binnum = stats.binned_statistic(self.R_circ_stars_kpc[self.i_r_circ_stars_in], np.abs(self.vphi_circ_stars_kms[self.i_r_circ_stars_in]), bins = N)
 		R_bins_kpc = R_bin_edges[:-1] + 1./2. * (R_bin_edges[1:] - R_bin_edges[:-1])
 		return(v_mean_kms, R_bins_kpc)
 
 		
-	def voldens_data(self, z_kpc = None, R_kpc = None):
+	def voldens_data(self, N = 25, z_kpc = None, R_kpc = None):
 		if z_kpc is not None:
 			mass_hist, R_bin_edges = np.histogram(self.R_kpc[self.i_r_in], weights = self.s.mass[self.i_disk][self.i_r_in], bins = N)
 			volume = np.pi * (R_bin_edges[1:]**2 - R_bin_edges[:-1]**2) * z_kpc
@@ -351,9 +373,9 @@ class decomposition():
 		else:print('Please specify z OR R [kpc].')
 
 
-	def plot_surfdens(self, N = 25, safefigure = True):
+	def plot_surfdens(self, N = 25, safefigure = True, use_masses = False, use_n = True):
 		surfdens_data_Msun_pc2_data, R_bins_kpc = self.surfdens_data(N)
-		surfdens_bestfit_Msun_pc2 = self.surfdens_galpy(R_bins_kpc)
+		surfdens_bestfit_Msun_pc2 = self.surfdens_galpy(R_bins_kpc, use_masses = use_masses, use_n = use_n)
 		fig,ax = plt.subplots(figsize = (8,8))
 		ax.plot(R_bins_kpc, surfdens_data_Msun_pc2_data, 'k.', label = 'data')
 		ax.plot(R_bins_kpc, surfdens_bestfit_Msun_pc2, 'r-', label = 'best fit')
@@ -365,9 +387,9 @@ class decomposition():
 			fig.savefig(self.plotdir + 'surface_dens_disk_fit_data.png', dpi = 300, format = 'png' )
 		plt.show()
 
-	def plot_circvel(self, N = 25, safefigure = True):
+	def plot_circvel(self, N = 25, safefigure = True, use_masses = False, use_n = True):
 		v_mean_kms, R_bins_kpc = self.circvel_data(N)
-		vcirc_tot_bestfit_kms, vcirc_disk_bestfit_kms, vcirc_spher_bestfit_kms, vcirc_halo_bestfit_kms = self.circvel_galpy(R_bins_kpc, N)
+		vcirc_tot_bestfit_kms, vcirc_disk_bestfit_kms, vcirc_spher_bestfit_kms, vcirc_halo_bestfit_kms = self.circvel_galpy(R_bins_kpc, N, use_masses, use_n)
 
 		fig,ax = plt.subplots(figsize = (8,8))
 		ax.plot(R_bins_kpc, v_mean_kms, 'k.', label = 'data')
@@ -385,8 +407,7 @@ class decomposition():
 
 		
 	def plot_voldens(self, safefigure = True):
-		pass
-		voldens_data_Msun_pc3_data, R_bins_kpc = self.voldens_data(N)
+		voldens_data_Msun_pc3_data, R_bins_kpc = self.voldens_data(N, z_kpc, R_kpc)
 		voldens_bestfit_Msun_pc3 = self.voldens_galpy(R_bins_kpc)
 		fig,ax = plt.subplots(figsize = (8,8))
 		ax.plot(R_bins_kpc, voldens_data_Msun_pc3_data, 'k.', label = 'data')
