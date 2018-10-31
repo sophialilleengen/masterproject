@@ -340,15 +340,16 @@ class decomposition():
 		return(vcirc_tot_bestfit_kms, vcirc_disk_bestfit_kms, vcirc_spher_bestfit_kms, vcirc_halo_bestfit_kms)
 
 	def voldens_galpy(self, R_bins_kpc, z_extend_kpc = 5., use_masses = False, use_n = True):
-		surfdens_bestfit = np.zeros(len(R_bins_kpc))
+        ###### THIS IS NOT RIGHT YET
+		voldens_bestfit = np.zeros(len(R_bins_kpc))
 		if use_masses == True:
 			for i, item in enumerate(R_bins_kpc):
-				surfdens_bestfit[i] = self.disk.surfdens(item * u.kpc, z_extend_kpc * u.kpc) 
+				voldens_bestfit[i] = self.disk.dens(R_kpc* u.kpc, z_kpc * u.kpc) 
 		elif use_n == True:
 			for i, item in enumerate(R_bins_kpc):
 				item_galpy = item / self.R0_kpc
 				z_extend_galpy = item / self.R0_kpc
-				surfdens_bestfit[i] = self.disk.surfdens(item_galpy, z_extend_galpy) * bovy_conversion.surfdens_in_msolpc2(self.v0_tot_kms, self.R0_kpc)
+				voldens_bestfit[i] = self.disk.dens(item_galpy, z_extend_galpy) * bovy_conversion.surfdens_in_msolpc2(self.v0_tot_kms, self.R0_kpc)
 
 		return(surfdens_bestfit)
 	def circvel_data(self, N = 25):
@@ -406,9 +407,14 @@ class decomposition():
 		plt.show()
 
 		
-	def plot_voldens(self, safefigure = True):
-		voldens_data_Msun_pc3_data, R_bins_kpc = self.voldens_data(N, z_kpc, R_kpc)
-		voldens_bestfit_Msun_pc3 = self.voldens_galpy(R_bins_kpc)
+	def plot_voldens(self, safefigure = True, N = 25, fix_z = True, fiz_R = False, R_dat_kpc = None):
+		if fix_z == True:
+            z_dat_kpc = np.median(np.abs(self.z_kpc))
+			voldens_data_Msun_pc3_data, R_bins_kpc = self.voldens_data(N, z_kpc = z_dat_kpc, R_kpc = self.R_kpc)
+			voldens_bestfit_Msun_pc3 = self.voldens_galpy(R_bins_kpc)
+		elif fix_R == True:
+			voldens_data_Msun_pc3_data, R_bins_kpc = self.voldens_data(N, z_kpc = self.z_kpc, R_kpc = R_dat_kpc)
+			voldens_bestfit_Msun_pc3 = self.voldens_galpy(R_bins_kpc)
 		fig,ax = plt.subplots(figsize = (8,8))
 		ax.plot(R_bins_kpc, voldens_data_Msun_pc3_data, 'k.', label = 'data')
 		ax.plot(R_bins_kpc, voldens_bestfit_Msun_pc3, 'r-', label = 'best fit')
