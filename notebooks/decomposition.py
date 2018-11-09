@@ -20,11 +20,14 @@ from scipy import stats
 
 from astropy import units as u
 
+
 from matplotlib import pyplot as plt
 
 
 
+
 class decomposition():
+
 	def __init__(self, machine = 'magny', use_masses = False, use_n = True, galpyinputfile = None, galpyinputdata = None):
 		self.machine = machine
 
@@ -47,16 +50,22 @@ class decomposition():
 		self._get_disk_indices()
 		print('Calculate spheroid indices.')
 		self._get_spheroid_indices()
+		print("Calculate halo indices.")
+		self._get_halo_indices()      
 		print('Load positions and masses of simulation data.')
 		self._get_disk_positions()
 		self._get_spher_positions()
+		self._get_halo_positions()
 		self._get_disk_masses()
 		self._get_spher_masses()
+		self._get_halo_masses()
 		self._get_circ_stars_pos_vel()
 		print('Import galpy parameters.')
 		self._get_galpy_parameters(galpyinputfile, galpyinputdata)
 		print("Setup galpy potential.")
 		self._setup_galpy_potential(use_masses, use_n)
+		print('Set plot options.')
+		self._set_plot_colors()
 
 
 	def _get_galpy_parameters(self, inputfile, inputdata):
@@ -125,7 +134,7 @@ class decomposition():
 				# later on (e.g. dividing by zero)
 				self.s.data['gmet'] = np.maximum( self.s.data['gmet'], 1e-40 )
 
-#_____function that sets-up galpy potential_____
+##### Set up galpy potential #####
 	def _setup_galpy_potential(self, use_masses = False, use_n = True):
 		#test input:
 		if (self.a_MND_kpc <= 0.) or (self.b_MND_kpc <= 0.) or (self.a_NFWH_kpc <= 0.) or (self.a_HB_kpc <= 0.) \
@@ -299,6 +308,9 @@ class decomposition():
 
 	def _get_spheroid_indices(self):
 		self.i_spher = np.isin(self.s.id, self.spheroid_IDs)
+    
+	def _get_halo_indices(self):
+		self.i_halo = np.where(((self.s.type ==1  ) +  (self.s.type == 2) + (self.s.type == 3))* (self.s.halo ==0)* (self.s.subhalo == 0), True, False)# 
 
 	def _get_disk_positions(self):
 		self.r_disk_kpc = 1000. * self.s.r()[self.i_disk]
@@ -324,6 +336,19 @@ class decomposition():
 
 		# keep it within galrad
 		self.i_r_inspher = self.r_spher_kpc <= (1000. * self.s.galrad)
+		self.i_z_inspher = (self.z_spher_kpc >= -5.) * (self.z_spher_kpc <= 5.)
+        
+	def _get_halo_positions(self):
+		self.r_halo_kpc = 1000. * self.s.r()[self.i_halo]
+		self.x_halo_kpc = 1000. * self.s.pos[:, 2][self.i_halo]
+		self.y_halo_kpc = 1000. * self.s.pos[:, 1][self.i_halo]
+		self.z_halo_kpc = 1000. * self.s.pos[:, 0][self.i_halo]
+		self.R_halo_kpc = np.sqrt(self.x_halo_kpc**2 + self.y_halo_kpc**2)
+
+
+		# keep it within galrad
+		self.i_r_inhalo = self.r_halo_kpc <= (1000. * self.s.galrad)
+		self.i_z_inhalo = (self.z_halo_kpc >= -5.) * (self.z_halo_kpc <= 5.)
         
 	def _get_circ_stars_pos_vel(self):
 		self.ID_disk_circ, self.ID_spher_circ = self._decomp(circ_val = 0.9, include_zmax = True, zmax = 0.005)
@@ -337,7 +362,68 @@ class decomposition():
 		self.disk_masses_10msun = self.s.mass[self.i_disk][self.i_r_indisk * self.i_z_indisk]
         
 	def _get_spher_masses(self):
-		self.spher_masses_10msun = self.s.mass[self.i_spher][self.i_r_inspher]
+		self.spher_masses_10msun = self.s.mass[self.i_spher][self.i_r_inspher* self.i_z_inspher]
+
+	def _get_halo_masses(self):
+		self.halo_masses_10msun = self.s.mass[self.i_halo][self.i_r_inhalo* self.i_z_inhalo]
+        
+	def _set_plot_colors(self):
+		self.disk_color = 'blue'
+		self.halo_color = 'orange'
+		self.spher_color = 'green'
+		self.tot_color = 'red'
+##### Circular velocities #####
+        
+	def circvel_data(self, N = 25):
+		v_mean_kms, R_bin_edges, binnum = stats.binned_statistic(self.R_circ_stars_kpc[self.i_r_circ_stars_in], np.abs(self.vphi_circ_stars_kms[self.i_r_circ_stars_in]), bins = N)
+		R_bins_kpc = R_bin_edges[:-1] + 1./2. * (R_bin_edges[1:] - R_bin_edges[:-1])
+		return(v_mean_kms, R_bins_kpc)
+
+	def circvel_galpy(self, R_bins_kpc, N = 25, use_masses = False, use_n = True):
+		vcirc_disk_bestfit_kms  = np.zeros(N)
+		vcirc_spher_bestfit_kms = np.zeros(N)
+		vcirc_halo_bestfit_kms  = np.zeros(N)
+		vcirc_tot_bestfit_kms   = np.zeros(N)
+		if use_masses == True:
+			for i, item in enumerate(R_bins_kpc):
+				vcirc_disk_bestfit_kms[i]  = self.disk.vcirc(item*u.kpc)		
+				vcirc_halo_bestfit_kms[i]  = self.halo.vcirc(item*u.kpc)	
+				vcirc_spher_bestfit_kms[i] = self.bulge.vcirc(item*u.kpc)	
+				vcirc_tot_bestfit_kms[i]   = vcirc(self.pot, item*u.kpc)
+		elif use_n == True:
+			for i, item in enumerate(R_bins_kpc):
+				item_galpy = item / self.R0_kpc
+				vcirc_disk_bestfit_kms[i]  = self.disk.vcirc(item_galpy)*self.v0_tot_kms		
+				vcirc_halo_bestfit_kms[i]  = self.halo.vcirc(item_galpy)*self.v0_tot_kms	
+				vcirc_spher_bestfit_kms[i] = self.bulge.vcirc(item_galpy)*self.v0_tot_kms	
+				vcirc_tot_bestfit_kms[i]   = vcirc(self.pot, item_galpy)*self.v0_tot_kms
+		return(vcirc_tot_bestfit_kms, vcirc_disk_bestfit_kms, vcirc_spher_bestfit_kms, vcirc_halo_bestfit_kms)
+
+	def plot_circvel(self, N = 25, safefigure = True, use_masses = False, use_n = True):
+		v_mean_kms, R_bins_kpc = self.circvel_data(N)
+		vcirc_tot_bestfit_kms, vcirc_disk_bestfit_kms, vcirc_spher_bestfit_kms, vcirc_halo_bestfit_kms = self.circvel_galpy(R_bins_kpc, N, use_masses, use_n)
+
+		fig,ax = plt.subplots(figsize = (8,8))
+		ax.spines['top'].set_linewidth(1.5)
+		ax.spines['bottom'].set_linewidth(1.5)
+		ax.spines['left'].set_linewidth(1.5)
+		ax.spines['right'].set_linewidth(1.5)
+		ax.xaxis.set_tick_params(width=1.5)
+		ax.yaxis.set_tick_params(width=1.5)
+		ax.plot(R_bins_kpc, v_mean_kms, 'k.', label = 'data')
+		ax.plot(R_bins_kpc, vcirc_tot_bestfit_kms, color = self.tot_color, linestyle = '-', label = 'fit total')
+		ax.plot(R_bins_kpc, vcirc_disk_bestfit_kms, color = self.disk_color, linestyle = '--', label = 'fit disk')
+		ax.plot(R_bins_kpc, vcirc_spher_bestfit_kms, color = self.spher_color, linestyle = '-.', label = 'fit spheroid')
+		ax.plot(R_bins_kpc, vcirc_halo_bestfit_kms, color = self.halo_color, linestyle = ':', label = 'fit halo')
+		ax.set_ylabel('circular velocity [km s$^{-1}$]')
+		ax.set_xlabel('R [kpc]')
+		ax.legend(loc = 4)
+		fig.tight_layout()
+		if safefigure == True:
+			fig.savefig(self.plotdir + 'circ_vel_fit_data_test.png', dpi = 300, format = 'png' )
+		plt.show()
+
+##### Surface densities #####
         
 	def surfdens_disk_data(self, N = 25):
 		mass_hist, R_bin_edges = np.histogram(self.R_disk_kpc[self.i_r_indisk * self.i_z_indisk], weights = self.disk_masses_10msun, bins = N)
@@ -359,42 +445,120 @@ class decomposition():
 		return(surfdens_bestfit)
     
 	def surfdens_spher_data(self, N = 25):
-		mass_hist, r_bin_edges = np.histogram(self.r_spher_kpc[self.i_r_inspher], weights = self.spher_masses_10msun, bins = N)
-		area = np.pi * (r_bin_edges[1:]**2 - r_bin_edges[:-1]**2)
+		mass_hist, R_bin_edges = np.histogram(self.R_spher_kpc[self.i_r_inspher* self.i_z_inspher], weights = self.spher_masses_10msun, bins = N)
+		area = np.pi * (R_bin_edges[1:]**2 - R_bin_edges[:-1]**2)
 		rho_Msun_pc2 = 1e4 * mass_hist / area
-		r_mean_kpc = r_bin_edges[:-1] + 1./2. * (r_bin_edges[1:] - r_bin_edges[:-1])
-		return(rho_Msun_pc2, r_mean_kpc)
+		R_mean_kpc = R_bin_edges[:-1] + 1./2. * (R_bin_edges[1:] - R_bin_edges[:-1])
+		return(rho_Msun_pc2, R_mean_kpc)
 
-	def surfdens_spher_galpy(self, r_bins_kpc, use_masses = False, use_n = True):
-		surfdens_bestfit = np.zeros(len(r_bins_kpc))
+	def surfdens_spher_galpy(self, R_bins_kpc, z_extend_kpc = 5., use_masses = False, use_n = True):
+		surfdens_bestfit = np.zeros(len(R_bins_kpc))
 		if use_masses == True:
-			for i, item in enumerate(r_bins_kpc):
-				surfdens_bestfit[i] = self.bulge.surfdens(item * u.kpc, 0. * u.kpc) #### check how surface density of bulge is calculated?
+			for i, item in enumerate(R_bins_kpc):
+				surfdens_bestfit[i] = self.bulge.surfdens(item * u.kpc, z_extend_kpc * u.kpc) #### check how surface density of bulge is calculated?
 		elif use_n == True:
-			for i, item in enumerate(r_bins_kpc):
+			for i, item in enumerate(R_bins_kpc):
 				item_galpy = item / self.R0_kpc
-				surfdens_bestfit[i] = self.bulge.surfdens(item_galpy, 0.) * bovy_conversion.surfdens_in_msolpc2(self.v0_tot_kms, self.R0_kpc)
+				z_extend_galpy = z_extend_kpc / self.R0_kpc
+				surfdens_bestfit[i] = self.bulge.surfdens(item_galpy, z_extend_galpy) * bovy_conversion.surfdens_in_msolpc2(self.v0_tot_kms, self.R0_kpc)
 		return(surfdens_bestfit)
+    
+	def surfdens_halo_data(self, N = 25):
+		mass_hist, R_bin_edges = np.histogram(self.R_halo_kpc[self.i_r_inhalo* self.i_z_inhalo], weights = self.halo_masses_10msun, bins = N)
+		area = np.pi * (R_bin_edges[1:]**2 - R_bin_edges[:-1]**2)
+		rho_Msun_pc2 = 1e4 * mass_hist / area
+		R_mean_kpc = R_bin_edges[:-1] + 1./2. * (R_bin_edges[1:] - R_bin_edges[:-1])
+		return(rho_Msun_pc2, R_mean_kpc)
 
-	def circvel_galpy(self, R_bins_kpc, N = 25, use_masses = False, use_n = True):
-		vcirc_disk_bestfit_kms  = np.zeros(N)
-		vcirc_spher_bestfit_kms = np.zeros(N)
-		vcirc_halo_bestfit_kms  = np.zeros(N)
-		vcirc_tot_bestfit_kms   = np.zeros(N)
+	def surfdens_halo_galpy(self, R_bins_kpc, z_extend_kpc = 5., use_masses = False, use_n = True):
+		surfdens_bestfit = np.zeros(len(R_bins_kpc))
 		if use_masses == True:
 			for i, item in enumerate(R_bins_kpc):
-				vcirc_disk_bestfit_kms[i]  = self.disk.vcirc(item*u.kpc)		
-				vcirc_halo_bestfit_kms[i]  = self.halo.vcirc(item*u.kpc)	
-				vcirc_spher_bestfit_kms[i] = self.bulge.vcirc(item*u.kpc)	
-				vcirc_tot_bestfit_kms[i]   = vcirc(self.pot, item*u.kpc)
+				surfdens_bestfit[i] = self.halo.surfdens(item * u.kpc, z_extend_kpc * u.kpc) #### check how surface density of bulge is calculated?
 		elif use_n == True:
 			for i, item in enumerate(R_bins_kpc):
 				item_galpy = item / self.R0_kpc
-				vcirc_disk_bestfit_kms[i]  = self.disk.vcirc(item_galpy)*self.v0_tot_kms		
-				vcirc_halo_bestfit_kms[i]  = self.halo.vcirc(item_galpy)*self.v0_tot_kms	
-				vcirc_spher_bestfit_kms[i] = self.bulge.vcirc(item_galpy)*self.v0_tot_kms	
-				vcirc_tot_bestfit_kms[i]   = vcirc(self.pot, item_galpy)*self.v0_tot_kms
-		return(vcirc_tot_bestfit_kms, vcirc_disk_bestfit_kms, vcirc_spher_bestfit_kms, vcirc_halo_bestfit_kms)
+				z_extend_galpy = z_extend_kpc / self.R0_kpc
+				surfdens_bestfit[i] = self.halo.surfdens(item_galpy, z_extend_galpy) * bovy_conversion.surfdens_in_msolpc2(self.v0_tot_kms, self.R0_kpc)
+		return(surfdens_bestfit)
+        
+	def plot_surfdens_disk(self, N = 25, safefigure = True, use_masses = False, use_n = True):
+		surfdens_data_Msun_pc2_data, R_bins_kpc = self.surfdens_disk_data(N)
+		surfdens_bestfit_Msun_pc2 = self.surfdens_disk_galpy(R_bins_kpc, use_masses = use_masses, use_n = use_n)
+		fig,ax = plt.subplots(figsize = (8,8))
+		ax.spines['top'].set_linewidth(1.5)
+		ax.spines['bottom'].set_linewidth(1.5)
+		ax.spines['left'].set_linewidth(1.5)
+		ax.spines['right'].set_linewidth(1.5)
+		ax.xaxis.set_tick_params(width=1.5)
+		ax.yaxis.set_tick_params(width=1.5)
+		ax.semilogy(R_bins_kpc, surfdens_data_Msun_pc2_data, 'k.', label = 'data')
+		ax.semilogy(R_bins_kpc, surfdens_bestfit_Msun_pc2, color = self.disk_color, linestyle = '-', label = 'best fit')
+		ax.set_ylabel('disk surface density [M$_\odot$  pc$^{-2}$]')
+		ax.set_xlabel('R [kpc]')
+		ax.legend()
+		fig.tight_layout()
+		if safefigure == True:
+			fig.savefig(self.plotdir + 'surface_dens_disk_fit_data.png', dpi = 300, format = 'png' )
+		plt.show()
+
+	def plot_surfdens_spher(self, N = 25, safefigure = True, use_masses = False, use_n = True):
+		surfdens_spher_data_Msun_pc2_data, r_bins_kpc = self.surfdens_spher_data(N)
+		surfdens_spher_bestfit_Msun_pc2 = self.surfdens_spher_galpy(r_bins_kpc, use_masses = use_masses, use_n = use_n)
+		fig,ax = plt.subplots(figsize = (8,8))
+		ax.spines['top'].set_linewidth(1.5)
+		ax.spines['bottom'].set_linewidth(1.5)
+		ax.spines['left'].set_linewidth(1.5)
+		ax.spines['right'].set_linewidth(1.5)
+		ax.xaxis.set_tick_params(width=1.5)
+		ax.yaxis.set_tick_params(width=1.5)
+		ax.semilogy(r_bins_kpc, surfdens_spher_data_Msun_pc2_data, 'k.', label = 'data')
+		ax.semilogy(r_bins_kpc, surfdens_spher_bestfit_Msun_pc2, color = self.spher_color, linestyle = '-', label = 'best fit')
+		ax.set_ylabel('bulge surface density [M$_\odot$  pc$^{-2}$]')
+		ax.set_xlabel('r [kpc]')
+		ax.legend()
+		fig.tight_layout()
+		if safefigure == True:
+			fig.savefig(self.plotdir + 'surface_dens_spher_fit_data.png', dpi = 300, format = 'png' )
+		plt.show()
+
+	def plot_surfdens_halo(self, N = 25, safefigure = True, use_masses = False, use_n = True):
+		surfdens_halo_data_Msun_pc2_data, r_bins_kpc = self.surfdens_halo_data(N)
+		surfdens_halo_bestfit_Msun_pc2 = self.surfdens_halo_galpy(r_bins_kpc, use_masses = use_masses, use_n = use_n)
+		fig,ax = plt.subplots(figsize = (8,8))
+		ax.spines['top'].set_linewidth(1.5)
+		ax.spines['bottom'].set_linewidth(1.5)
+		ax.spines['left'].set_linewidth(1.5)
+		ax.spines['right'].set_linewidth(1.5)
+		ax.xaxis.set_tick_params(width=1.5)
+		ax.yaxis.set_tick_params(width=1.5)
+		ax.semilogy(r_bins_kpc, surfdens_halo_data_Msun_pc2_data, 'k.', label = 'data')
+		ax.semilogy(r_bins_kpc, surfdens_halo_bestfit_Msun_pc2, color = self.halo_color, linestyle ='-', label = 'best fit')
+		ax.set_ylabel('halo surface density [M$_\odot$  pc$^{-2}$]')
+		ax.set_xlabel('r [kpc]')
+		ax.legend()
+		fig.tight_layout()
+		if safefigure == True:
+			fig.savefig(self.plotdir + 'surface_dens_halo_fit_data.png', dpi = 300, format = 'png' )
+		plt.show()
+
+##### Volume densities #####        
+
+	def voldens_disk_data(self, N = 25, z_kpc = None, R_kpc = None):
+        ##### aufteilung funktioniert so nicht ####
+		if z_kpc is not None:
+			mass_hist, R_bin_edges = np.histogram(self.R_disk_kpc[self.i_r_indisk], weights = self.s.mass[self.i_disk][self.i_r_indisk], bins = N)
+			volume = np.pi * (R_bin_edges[1:]**2 - R_bin_edges[:-1]**2) * z_kpc
+			rho_Msun_pc3 = 10. * mass_hist / volume
+			R_mean_kpc = R_bin_edges[:-1] + 1./2. * (R_bin_edges[1:] - R_bin_edges[:-1])
+			return(rho_Msun_pc3, R_mean_kpc)
+		elif R_kpc is not None:
+			mass_hist, z_bin_edges = np.histogram(self.z_disk_kpc[self.i_r_in], weights = self.s.mass[self.i_disk][self.i_r_indisk], bins = N)
+			z_mean_kpc = z_bin_edges[:-1] + 1./2. * (z_bin_edges[1:] - z_bin_edges[:-1])
+			volume = np.pi * R_kpc**2 * z_mean_kpc
+			rho_Msun_pc3 = 10. * mass_hist / volume
+			return(rho_Msun_pc3, z_mean_kpc)
+		else:print('Please specify z OR R [kpc].')
 
 	def voldens_disk_galpy(self, R_kpc, z_kpc, fix_z = True, fiz_R = False, use_masses = False, use_n = True):
 		if fix_z == True:
@@ -421,6 +585,14 @@ class decomposition():
 
 		return(voldens_bestfit)
     
+	def voldens_spher_data(self, N = 25):
+		r_spher_kpc = 1000. * self.s.r()[self.i_spher]      
+		mass_hist, r_bin_edges = np.histogram(r_spher_kpc, weights = self.s.mass[self.i_spher][self.i_r_inspher], bins = N)
+		volume = 4./3. * np.pi * (r_bin_edges[1:]**3 - r_bin_edges[:-1]**3)
+		rho_Msun_pc3 = 10. * mass_hist / volume
+		r_mean_kpc = r_bin_edges[:-1] + 1./2. * (r_bin_edges[1:] - r_bin_edges[:-1])
+		return(rho_Msun_pc3, r_mean_kpc)
+    
 	def voldens_spher_galpy(self, r_kpc, use_masses = False, use_n = True):
 		voldens_bestfit = np.zeros(len(r_kpc))
 		if use_masses == True:
@@ -432,113 +604,91 @@ class decomposition():
 				voldens_bestfit[i] = self.bulge.dens(item_galpy, 0.) * bovy_conversion.dens_in_msolpc3(self.v0_tot_kms, self.R0_kpc)
 		return(voldens_bestfit)
     
-	def circvel_data(self, N = 25):
-		v_mean_kms, R_bin_edges, binnum = stats.binned_statistic(self.R_circ_stars_kpc[self.i_r_circ_stars_in], np.abs(self.vphi_circ_stars_kms[self.i_r_circ_stars_in]), bins = N)
-		R_bins_kpc = R_bin_edges[:-1] + 1./2. * (R_bin_edges[1:] - R_bin_edges[:-1])
-		return(v_mean_kms, R_bins_kpc)
-
-		
-	def voldens_disk_data(self, N = 25, z_kpc = None, R_kpc = None):
-		if z_kpc is not None:
-			mass_hist, R_bin_edges = np.histogram(self.R_disk_kpc[self.i_r_indisk], weights = self.s.mass[self.i_disk][self.i_r_indisk], bins = N)
-			volume = np.pi * (R_bin_edges[1:]**2 - R_bin_edges[:-1]**2) * z_kpc
-			rho_Msun_pc3 = 10. * mass_hist / volume
-			R_mean_kpc = R_bin_edges[:-1] + 1./2. * (R_bin_edges[1:] - R_bin_edges[:-1])
-			return(rho_Msun_pc3, R_mean_kpc)
-		elif R_kpc is not None:
-			mass_hist, z_bin_edges = np.histogram(self.z_disk_kpc[self.i_r_in], weights = self.s.mass[self.i_disk][self.i_r_indisk], bins = N)
-			z_mean_kpc = z_bin_edges[:-1] + 1./2. * (z_bin_edges[1:] - z_bin_edges[:-1])
-			volume = np.pi * R_kpc**2 * z_mean_kpc
-			rho_Msun_pc3 = 10. * mass_hist / volume
-			return(rho_Msun_pc3, z_mean_kpc)
-		else:print('Please specify z OR R [kpc].')
-
-	def voldens_spher_data(self, N = 25):
-		r_spher_kpc = 1000. * self.s.r()[self.i_spher]      
-		mass_hist, r_bin_edges = np.histogram(r_spher_kpc, weights = self.s.mass[self.i_spher][self.i_r_inspher], bins = N)
+	def voldens_halo_data(self, N = 25):
+		r_halo_kpc = 1000. * self.s.r()[self.i_halo][self.i_r_inhalo]      
+		mass_hist, r_bin_edges = np.histogram(r_halo_kpc, weights = self.s.mass[self.i_halo][self.i_r_inhalo], bins = N)
 		volume = 4./3. * np.pi * (r_bin_edges[1:]**3 - r_bin_edges[:-1]**3)
 		rho_Msun_pc3 = 10. * mass_hist / volume
 		r_mean_kpc = r_bin_edges[:-1] + 1./2. * (r_bin_edges[1:] - r_bin_edges[:-1])
 		return(rho_Msun_pc3, r_mean_kpc)
+    
+	def voldens_halo_galpy(self, r_kpc, use_masses = False, use_n = True):
+		voldens_bestfit = np.zeros(len(r_kpc))
+		if use_masses == True:
+			for i, item in enumerate(r_kpc):
+				voldens_bestfit[i] = self.halo.dens(item * u.kpc, 0. * u.kpc) #### check how density of bulge is calculated?
+		elif use_n == True:
+			for i, item in enumerate(r_kpc):
+				item_galpy = item / self.R0_kpc
+				voldens_bestfit[i] = self.halo.dens(item_galpy, 0.) * bovy_conversion.dens_in_msolpc3(self.v0_tot_kms, self.R0_kpc)
+		return(voldens_bestfit)
 
-	def plot_surfdens_disk(self, N = 25, safefigure = True, use_masses = False, use_n = True):
-		surfdens_data_Msun_pc2_data, R_bins_kpc = self.surfdens_disk_data(N)
-		surfdens_bestfit_Msun_pc2 = self.surfdens_disk_galpy(R_bins_kpc, use_masses = use_masses, use_n = use_n)
-		fig,ax = plt.subplots(figsize = (8,8))
-		ax.semilogy(R_bins_kpc, surfdens_data_Msun_pc2_data, 'k.', label = 'data')
-		ax.semilogy(R_bins_kpc, surfdens_bestfit_Msun_pc2, 'r-', label = 'best fit')
-		ax.set_ylabel('surface density [$M_\odot / pc^2$]', fontsize = 22)
-		ax.set_xlabel('R [kpc]', fontsize = 22)
-		ax.legend()
-		fig.tight_layout()
-		if safefigure == True:
-			fig.savefig(self.plotdir + 'surface_dens_disk_fit_data.png', dpi = 300, format = 'png' )
-		plt.show()
-
-	def plot_surfdens_spher(self, N = 25, safefigure = True, use_masses = False, use_n = True):
-		surfdens_spher_data_Msun_pc2_data, r_bins_kpc = self.surfdens_spher_data(N)
-		surfdens_spher_bestfit_Msun_pc2 = self.surfdens_spher_galpy(r_bins_kpc, use_masses = use_masses, use_n = use_n)
-		fig,ax = plt.subplots(figsize = (8,8))
-		ax.semilogy(r_bins_kpc, surfdens_spher_data_Msun_pc2_data, 'k.', label = 'data')
-		ax.semilogy(r_bins_kpc, surfdens_spher_bestfit_Msun_pc2, 'r-', label = 'best fit')
-		ax.set_ylabel('surface density [$M_\odot / pc^2$]', fontsize = 22)
-		ax.set_xlabel('r [kpc]', fontsize = 22)
-		ax.legend()
-		fig.tight_layout()
-		if safefigure == True:
-			fig.savefig(self.plotdir + 'surface_dens_spher_fit_data.png', dpi = 300, format = 'png' )
-		plt.show()
-        
-	def plot_circvel(self, N = 25, safefigure = True, use_masses = False, use_n = True):
-		v_mean_kms, R_bins_kpc = self.circvel_data(N)
-		vcirc_tot_bestfit_kms, vcirc_disk_bestfit_kms, vcirc_spher_bestfit_kms, vcirc_halo_bestfit_kms = self.circvel_galpy(R_bins_kpc, N, use_masses, use_n)
-
-		fig,ax = plt.subplots(figsize = (8,8))
-		ax.plot(R_bins_kpc, v_mean_kms, 'k.', label = 'data')
-		ax.plot(R_bins_kpc, vcirc_tot_bestfit_kms, 'r-', label = 'fit total')
-		ax.plot(R_bins_kpc, vcirc_disk_bestfit_kms, 'b--', label = 'fit disk')
-		ax.plot(R_bins_kpc, vcirc_spher_bestfit_kms, 'g-.', label = 'fit spheroid')
-		ax.plot(R_bins_kpc, vcirc_halo_bestfit_kms, 'y:', label = 'fit halo')
-		ax.set_ylabel('circular velocity [km s$^{-1}$]', fontsize = 20)
-		ax.set_xlabel('R [kpc]', fontsize = 20)
-		ax.legend(loc = 4)
-		fig.tight_layout()
-		if safefigure == True:
-			fig.savefig(self.plotdir + 'circ_vel_fit_data_test.png', dpi = 300, format = 'png' )
-		plt.show()
-
-		
-	def plot_voldens_disk(self, safefigure = True, N = 25, fix_z = True, fiz_R = False, R_dat_kpc = 5.):
+	def plot_voldens_disk(self, safefigure = True, N = 25, fix_z = True, fix_R = False, R_dat_kpc = 5.):
 		if fix_z == True:
 			z_dat_kpc = np.median(np.abs(self.z_disk_kpc))
 			voldens_data_Msun_pc3_data, R_bins_kpc = self.voldens_disk_data(N, z_kpc = z_dat_kpc, R_kpc = self.R_disk_kpc)
 			voldens_bestfit_Msun_pc3 = self.voldens_disk_galpy(R_bins_kpc, z_dat_kpc)
+			filename = 'volume_dens_disk_fit_data_z_{}_kpc.png'.format(z_dat_kpc)
 		elif fix_R == True:
-			voldens_data_Msun_pc3_data, R_bins_kpc = self.voldens_data(N, z_kpc = self.z_disk_kpc, R_kpc = R_dat_kpc)
-			voldens_bestfit_Msun_pc3 = self.voldens_galpy(R_dat_kpc, self.z_disk_kpc)
+			voldens_data_Msun_pc3_data, R_bins_kpc = self.voldens_disk_data(N, z_kpc = self.z_disk_kpc, R_kpc = R_dat_kpc)
+			voldens_bestfit_Msun_pc3 = self.voldens_disk_galpy(R_dat_kpc, self.z_disk_kpc)
+			filename = 'volume_dens_disk_fit_data_R_{}_kpc.png'.format(R_dat_kpc)
 		fig,ax = plt.subplots(figsize = (8,8))
+		ax.spines['top'].set_linewidth(1.5)
+		ax.spines['bottom'].set_linewidth(1.5)
+		ax.spines['left'].set_linewidth(1.5)
+		ax.spines['right'].set_linewidth(1.5)
+		ax.xaxis.set_tick_params(width=1.5)
+		ax.yaxis.set_tick_params(width=1.5)
 		ax.plot(R_bins_kpc, voldens_data_Msun_pc3_data, 'k.', label = 'data')
-		ax.plot(R_bins_kpc, voldens_bestfit_Msun_pc3, 'r-', label = 'best fit')
-		ax.set_ylabel('volume density [$M_\odot pc^{-3}$]', fontsize = 22)
-		ax.set_xlabel('R [kpc]', fontsize = 22)
+		ax.plot(R_bins_kpc, voldens_bestfit_Msun_pc3, color = self.disk_color, linestyle = '-', label = 'best fit')
+		ax.set_ylabel('disk volume density [M$_\odot$  pc$^{-3}$]')
+		ax.set_xlabel('R [kpc]')
 		ax.legend()
 		fig.tight_layout()
 		if safefigure == True:
-			fig.savefig(self.plotdir + 'volume_dens_disk_fit_data.png', dpi = 300, format = 'png' )
+			fig.savefig(self.plotdir + filename, dpi = 300, format = 'png' )
 		plt.show()
         
 	def plot_voldens_spher(self, safefigure = True, N = 25):
 		voldens_spher_data_Msun_pc3_data, r_bins_kpc = self.voldens_spher_data(N)
 		voldens_spher_bestfit_Msun_pc3 = self.voldens_spher_galpy(r_bins_kpc)
 		fig,ax = plt.subplots(figsize = (8,8))
+		ax.spines['top'].set_linewidth(1.5)
+		ax.spines['bottom'].set_linewidth(1.5)
+		ax.spines['left'].set_linewidth(1.5)
+		ax.spines['right'].set_linewidth(1.5)
+		ax.xaxis.set_tick_params(width=1.5)
+		ax.yaxis.set_tick_params(width=1.5)
+
 		ax.semilogy(r_bins_kpc, voldens_spher_data_Msun_pc3_data, 'k.', label = 'data')
-		ax.semilogy(r_bins_kpc, voldens_spher_bestfit_Msun_pc3, 'r-', label = 'best fit')
-		ax.set_ylabel('bulge volume density [$M_\odot pc^{-3}$]', fontsize = 22)
-		ax.set_xlabel('r [kpc]', fontsize = 22)
+		ax.semilogy(r_bins_kpc, voldens_spher_bestfit_Msun_pc3, color = self.spher_color, linestyle = '-', label = 'best fit')
+		ax.set_ylabel('bulge volume density [M$_\odot$  pc$^{-3}$]')
+		ax.set_xlabel('r [kpc]')
 		ax.legend()
 		fig.tight_layout()
 		if safefigure == True:
 			fig.savefig(self.plotdir + 'volume_dens_bulge_fit_data.png', dpi = 300, format = 'png' )
+		plt.show()
+
+	def plot_voldens_halo(self, safefigure = True, N = 25):
+		voldens_halo_data_Msun_pc3_data, r_bins_kpc = self.voldens_halo_data(N)
+		voldens_halo_bestfit_Msun_pc3 = self.voldens_halo_galpy(r_bins_kpc)
+		fig,ax = plt.subplots(figsize = (8,8))
+		ax.spines['top'].set_linewidth(1.5)
+		ax.spines['bottom'].set_linewidth(1.5)
+		ax.spines['left'].set_linewidth(1.5)
+		ax.spines['right'].set_linewidth(1.5)
+		ax.xaxis.set_tick_params(width=1.5)
+		ax.yaxis.set_tick_params(width=1.5)
+		ax.semilogy(r_bins_kpc, voldens_halo_data_Msun_pc3_data, 'k.', label = 'data')
+		ax.semilogy(r_bins_kpc, voldens_halo_bestfit_Msun_pc3, color = self.halo_color, linestyle ='-', label = 'best fit')
+		ax.set_ylabel('halo volume density [M$_\odot$  pc$^{-3}$]')
+		ax.set_xlabel('r [kpc]')
+		ax.legend()
+		fig.tight_layout()
+		if safefigure == True:
+			fig.savefig(self.plotdir + 'volume_dens_halo_fit_data.png', dpi = 300, format = 'png' )
 		plt.show()
 
 
