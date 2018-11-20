@@ -28,7 +28,7 @@ from matplotlib import pyplot as plt
 
 class decomposition():
 
-	def __init__(self, machine = 'magny', use_masses = False, use_n = True, galpyinputfile = None, galpyinputdata = None):
+	def __init__(self, machine = 'virgo', use_masses = False, use_n = True, galpyinputfile = None, galpyinputdata = None):
 		self.machine = machine
 
 		if self.machine == 'magny':
@@ -39,6 +39,10 @@ class decomposition():
 			self.filedir = "/Users/smilanov/Documents/masterthesis/auriga_files/files/"
 			self.basedir = "/Users/smilanov/Desktop/Auriga/level4/"
 			self.plotdir = "/Users/smilanov/Documents/masterthesis/auriga_files/plots/"
+		elif self.machine == 'virgo': 
+			self.basedir = "/virgo/simulations/Auriga/level4_MHD/"
+			self.filedir = "/u/milas/masterthesis/masterproject/files"
+			self.plotdir = "/u/milas/masterthesis/masterproject/plots/"
 		else:
 			raise NotADirectoryError
             
@@ -544,7 +548,7 @@ class decomposition():
 
 ##### Volume densities #####        
 
-	def voldens_disk_data(self, N = 25, z_kpc = None, R_kpc = None):
+	def voldens_disk_1d_data(self, N = 25, z_kpc = None, R_kpc = None):
         ##### aufteilung funktioniert so nicht ####
 		if z_kpc is not None:
 			mass_hist, R_bin_edges = np.histogram(self.R_disk_kpc[self.i_r_indisk], weights = self.s.mass[self.i_disk][self.i_r_indisk], bins = N)
@@ -559,7 +563,25 @@ class decomposition():
 			rho_Msun_pc3 = 10. * mass_hist / volume
 			return(rho_Msun_pc3, z_mean_kpc)
 		else:print('Please specify z OR R [kpc].')
-
+            
+	def voldens_disk_2d_data(self, dR_kpc = 1., dz_kpc = 0.5):    
+		indisk = self.i_r_indisk * self.i_z_indisk
+		Rmin_kpc, Rmax_kpc = np.min(self.R_disk_kpc[indisk]), np.max(self.R_disk_kpc[indisk])
+		zmin_kpc, zmax_kpc = np.min(self.z_disk_kpc[indisk]), np.max(self.z_disk_kpc[indisk])
+    
+		N_R = (Rmax_kpc - Rmin_kpc) / dR_kpc
+		N_z = (zmax_kpc - zmin_kpc) / dz_kpc
+		Rbins, zbins = np.linspace(Rmin_kpc, Rmax_kpc, N_R), np.linspace(zmin_kpc, zmax_kpc, N_z)
+		mbins, volbins = np.zeros((len(zbins), len(Rbins))), np.zeros((len(zbins), len(Rbins))) 
+		for i in range(len(zbins)):
+			for j in range(len(Rbins)):
+				inbin = (Rbins[j] <= self.R_disk_kpc[indisk]) & (self.R_disk_kpc[indisk] < (Rbins[j] + dR_kpc)) & (zbins[i] <= self.z_disk_kpc[indisk]) & (self.z_disk_kpc[indisk] < (zbins[i] + dz_kpc))
+				mbins[i,j] = np.sum(self.disk_masses_10msun[inbin])
+				volbins[i,j] = np.pi * dz_kpc * (2. * Rbins[j] * dR_kpc + dR_kpc**2)
+       
+		rho = mbins / volbins
+		return(rho, Rbins, zbins)
+        
 	def voldens_disk_galpy(self, R_kpc, z_kpc, fix_z = True, fiz_R = False, use_masses = False, use_n = True):
 		if fix_z == True:
 			voldens_bestfit = np.zeros(len(R_kpc))
