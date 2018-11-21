@@ -28,7 +28,7 @@ from matplotlib import pyplot as plt
 
 class decomposition():
 
-	def __init__(self, machine = 'virgo', use_masses = False, use_n = True, galpyinputfile = None, galpyinputdata = None):
+	def __init__(self, machine = 'virgo', snapnr = 127, use_masses = False, use_n = True, galpyinputfile = None, galpyinputdata = None, have_galpy_potential = True):
 		self.machine = machine
 
 		if self.machine == 'magny':
@@ -47,7 +47,7 @@ class decomposition():
 			raise NotADirectoryError
             
 		print('Load snapshot.')
-		self._load_snapshot()
+		self._load_snapshot(snapnr)
 		print("Carry out decomposition.")
 		self.disk_IDs, self.spheroid_IDs = self._decomp()
 		print('Calculate disk indices.')
@@ -64,16 +64,18 @@ class decomposition():
 		self._get_spher_masses()
 		self._get_halo_masses()
 		self._get_circ_stars_pos_vel()
-		print('Import galpy parameters.')
-		self._get_galpy_parameters(galpyinputfile, galpyinputdata)
-		print("Setup galpy potential.")
-		self._setup_galpy_potential(use_masses, use_n)
+		if have_galpy_potential == True: 
+			print('Import galpy parameters.')
+			self._get_galpy_parameters(galpyinputfile, galpyinputdata)
+			print("Setup galpy potential.")
+			self._setup_galpy_potential(use_masses, use_n)
+		else: print('Galpy potentials not initialized.')
 		print('Set plot options.')
 		self._set_plot_colors()
 
 
 	def _get_galpy_parameters(self, inputfile, inputdata):
-		if (inputfile == None) and (inputdata == None):
+		if not isinstance(inputfile, str) and not isinstance(inputdata, np.ndarray):
 			self.a_MND_kpc   = 2.96507719743
 			self.b_MND_kpc   = 1.63627757204
 			self.a_HB_kpc	 = 1.71545528287
@@ -86,7 +88,20 @@ class decomposition():
 			self.n_MND		 = self.v0_MND_kms**2  / self.v0_tot_kms**2
 			self.n_HB		 = self.v0_HB_kms**2   / self.v0_tot_kms**2
 			self.n_NFWH		 = self.v0_NFWH_kms**2 / self.v0_tot_kms**2
-		elif inputfile != None:
+		elif isinstance(inputdata, np.ndarray):
+			self.a_MND_kpc   = inputdata[0]
+			self.b_MND_kpc   = inputdata[1]
+			self.a_HB_kpc	 = inputdata[2]
+			self.a_NFWH_kpc  = inputdata[3]
+			self.v0_tot_kms  = inputdata[4]
+			self.v0_MND_kms  = inputdata[5]
+			self.v0_HB_kms   = inputdata[6]
+			self.v0_NFWH_kms = inputdata[7]
+			self.R0_kpc		 = inputdata[8]
+			self.n_MND		 = self.v0_MND_kms**2  / self.v0_tot_kms**2
+			self.n_HB		 = self.v0_HB_kms**2   / self.v0_tot_kms**2
+			self.n_NFWH		 = self.v0_NFWH_kms**2 / self.v0_tot_kms**2
+		elif isinstance(inputfile, str):
 			data = np.loadtxt(self.filedir + inputfile)
 			self.a_MND_kpc   = data[0]
 			self.b_MND_kpc   = data[1]
@@ -100,21 +115,8 @@ class decomposition():
 			self.n_MND		 = self.v0_MND_kms**2  / self.v0_tot_kms**2
 			self.n_HB		 = self.v0_HB_kms**2   / self.v0_tot_kms**2
 			self.n_NFWH		 = self.v0_NFWH_kms**2 / self.v0_tot_kms**2
-		elif inputdata != None:
-			self.a_MND_kpc   = inputdata[0]
-			self.b_MND_kpc   = inputdata[1]
-			self.a_HB_kpc	 = inputdata[2]
-			self.a_NFWH_kpc  = inputdata[3]
-			self.v0_tot_kms  = inputdata[4]
-			self.v0_MND_kms  = inputdata[5]
-			self.v0_HB_kms   = inputdata[6]
-			self.v0_NFWH_kms = inputdata[7]
-			self.R0_kpc		 = inputdata[8]
-			self.n_MND		 = self.v0_MND_kms**2  / self.v0_tot_kms**2
-			self.n_HB		 = self.v0_HB_kms**2   / self.v0_tot_kms**2
-			self.n_NFWH		 = self.v0_NFWH_kms**2 / self.v0_tot_kms**2
 
-	def _load_snapshot(self, halo_number = 24, startsnap = 127, endsnap = 128):
+	def _load_snapshot(self, snapnr, halo_number = 24):
 
 			
 		#### path = /hits/universe/GigaGalaxy/level4_MHD/halo_24/output/*
@@ -124,30 +126,30 @@ class decomposition():
 			halodir = self.basedir+"halo_{0}/".format(halo_number)
 			snappath = halodir+"output/"
 
-			for snapnr in range(startsnap, endsnap, 1):
-				print("level   : {0}".format(level))
-				print("halo	: {0}".format(halo_number))
-				print("snapnr  : {0}".format(snapnr))
-				print("basedir : {0}".format(self.basedir))
-				print("halodir : {0}".format(halodir))
-				print("snappath: {0}\n".format(snappath))
-				self.s, self.sf = eat_snap_and_fof(level, halo_number, snapnr, snappath, loadonlytype=[1,2,3,4], 
-					haloid=0, galradfac=0.1, verbose=True) 
+			print("level   : {0}".format(level))
+			print("halo	: {0}".format(halo_number))
+			print("snapnr  : {0}".format(snapnr))
+			print("basedir : {0}".format(self.basedir))
+			print("halodir : {0}".format(halodir))
+			print("snappath: {0}\n".format(snappath))
+			self.s, self.sf = eat_snap_and_fof(level, halo_number, snapnr, snappath, loadonlytype=[1,2,3,4], 
+				haloid=0, galradfac=0.1, verbose=True) 
 
-				# Clean negative and zero values of gmet to avoid RuntimeErrors
-				# later on (e.g. dividing by zero)
-				self.s.data['gmet'] = np.maximum( self.s.data['gmet'], 1e-40 )
+			# Clean negative and zero values of gmet to avoid RuntimeErrors
+			# later on (e.g. dividing by zero)
+			self.s.data['gmet'] = np.maximum( self.s.data['gmet'], 1e-40 )
 
 ##### Set up galpy potential #####
-	def _setup_galpy_potential(self, use_masses = False, use_n = True):
+	def _setup_galpy_potential(self, use_masses = False, use_n = True, whole_potential = True):
 		#test input:
-		if (self.a_MND_kpc <= 0.) or (self.b_MND_kpc <= 0.) or (self.a_NFWH_kpc <= 0.) or (self.a_HB_kpc <= 0.) \
-		   or (self.n_MND <= 0.) or (self.n_NFWH <= 0.) or (self.n_HB <= 0.) or (self.n_MND >= 1.) or (self.n_NFWH >= 1.) or (self.n_HB >= 1.):
-			raise ValueError('Error in setup_galpy_potential: '+\
-							 'The input parameters for the scaling profiles do not correspond to a physical potential.')
-		if np.fabs(self.n_MND + self.n_NFWH + self.n_HB - 1.) > 1e-7:
-			raise ValueError('Error in setup_galpy_potential: '+\
-							 'The sum of the normalization does not add up to 1.')
+		if whole_potential == True:
+			if (self.a_MND_kpc <= 0.) or (self.b_MND_kpc <= 0.) or (self.a_NFWH_kpc <= 0.) or (self.a_HB_kpc <= 0.) \
+			   or (self.n_MND <= 0.) or (self.n_NFWH <= 0.) or (self.n_HB <= 0.) or (self.n_MND >= 1.) or (self.n_NFWH >= 1.) or (self.n_HB >= 1.):
+				raise ValueError('Error in setup_galpy_potential: '+\
+								 'The input parameters for the scaling profiles do not correspond to a physical potential.')
+			if np.fabs(self.n_MND + self.n_NFWH + self.n_HB - 1.) > 1e-7:
+				raise ValueError('Error in setup_galpy_potential: '+\
+								 'The sum of the normalization does not add up to 1.')
 			
 		#trafo to galpy units:
 		a_MND  = self.a_MND_kpc  / self.R0_kpc
@@ -159,10 +161,9 @@ class decomposition():
 			nfw_mass = np.sum(self.s.mass[((self.s.type == 1) + (self.s.type == 2) + (self.s.type == 3)) * (self.s.halo == 0) * (self.s.subhalo == 0)])* 1e10 * u.Msun #* (self.s.r()<=self.s.galrad)
 			hb_mass = 10**10*np.sum(self.s.mass[self.i_spher][self.s.r()[self.i_spher] <= self.s.galrad])*u.Msun
 			#setup potential:
-			self.disk = MiyamotoNagaiPotential(amp=10**10*np.sum(self.s.mass[self.i_disk][self.i_r_in])*u.Msun,
-                                               a=self.a_MND_kpc*u.kpc, b=self.b_MND_kpc*u.kpc,)
-			self.halo = NFWPotential(amp = nfw_mass, a = self.a_NFWH_kpc*u.kpc)
-			self.bulge = HernquistPotential(amp=hb_mass, a = self.a_HB_kpc*u.kpc) 
+			self.disk = MiyamotoNagaiPotential(amp=10**10*np.sum(self.disk_masses_10msun)*u.Msun, a=self.a_MND_kpc*u.kpc, b=self.b_MND_kpc*u.kpc,)
+			self.halo = NFWPotential(amp=10**10*np.sum(self.s.mass[self.i_halo][self.i_r_inhalo])*u.Msun, a = self.a_NFWH_kpc*u.kpc)
+			self.bulge = HernquistPotential(amp=10**10*np.sum(self.s.mass[self.i_spher][self.i_r_inspher])*u.Msun, a = self.a_HB_kpc*u.kpc) 
             
 		elif use_n == True:
 			self.disk = MiyamotoNagaiPotential(a=a_MND, b=b_MND,normalize = self.n_MND)
@@ -569,8 +570,8 @@ class decomposition():
 		Rmin_kpc, Rmax_kpc = np.min(self.R_disk_kpc[indisk]), np.max(self.R_disk_kpc[indisk])
 		zmin_kpc, zmax_kpc = np.min(self.z_disk_kpc[indisk]), np.max(self.z_disk_kpc[indisk])
     
-		N_R = (Rmax_kpc - Rmin_kpc) / dR_kpc
-		N_z = (zmax_kpc - zmin_kpc) / dz_kpc
+		N_R = int((Rmax_kpc - Rmin_kpc) / dR_kpc)
+		N_z = int((zmax_kpc - zmin_kpc) / dz_kpc)        
 		Rbins, zbins = np.linspace(Rmin_kpc, Rmax_kpc, N_R), np.linspace(zmin_kpc, zmax_kpc, N_z)
 		mbins, volbins = np.zeros((len(zbins), len(Rbins))), np.zeros((len(zbins), len(Rbins))) 
 		for i in range(len(zbins)):
@@ -582,7 +583,7 @@ class decomposition():
 		rho = mbins / volbins
 		return(rho, Rbins, zbins)
         
-	def voldens_disk_galpy(self, R_kpc, z_kpc, fix_z = True, fiz_R = False, use_masses = False, use_n = True):
+	def voldens_disk_1d_galpy(self, R_kpc, z_kpc, fix_z = True, fiz_R = False, use_masses = False, use_n = True):
 		if fix_z == True:
 			voldens_bestfit = np.zeros(len(R_kpc))
 			if use_masses == True:
@@ -606,6 +607,25 @@ class decomposition():
 					voldens_bestfit[i] = self.disk.dens(R_fix_galpy, item_galpy) * bovy_conversion.dens_in_msolpc3(self.v0_tot_kms, self.R0_kpc)
 
 		return(voldens_bestfit)
+    
+	def voldens_disk_2d_galpy(self, use_masses = True, use_n = False, dR_kpc = 1., dz_kpc = 0.5):
+		indisk = self.i_r_indisk * self.i_z_indisk
+		Rmin_kpc, Rmax_kpc = np.min(self.R_disk_kpc[indisk]), np.max(self.R_disk_kpc[indisk])
+		zmin_kpc, zmax_kpc = np.min(self.z_disk_kpc[indisk]), np.max(self.z_disk_kpc[indisk])
+    
+		N_R = int((Rmax_kpc - Rmin_kpc) / dR_kpc)
+		N_z = int((zmax_kpc - zmin_kpc) / dz_kpc)        
+		Rbins, zbins = np.linspace(Rmin_kpc, Rmax_kpc, N_R), np.linspace(zmin_kpc, zmax_kpc, N_z)
+		voldens_bestfit = np.zeros((len(zbins), len(Rbins)))
+		for i, z_item in enumerate(zbins):
+			for j, R_item in enumerate(Rbins):
+				if use_masses == True:
+					voldens_bestfit[i, j] = self.disk.dens(R_item * u.kpc, z_item * u.kpc) * bovy_conversion.dens_in_msolpc3(self.v0_tot_kms, self.R0_kpc)
+				elif use_n == True:
+					R_galpy = R_item / self.R0_kpc
+					z_galpy = z_item / self.R0_kpc
+					voldens_bestfit[i, j] = self.disk.dens(R_galpy, z_galpy) * bovy_conversion.dens_in_msolpc3(self.v0_tot_kms, self.R0_kpc)
+		return(voldens_bestfit, Rbins, zbins)   
     
 	def voldens_spher_data(self, N = 25):
 		r_spher_kpc = 1000. * self.s.r()[self.i_spher]      
