@@ -174,7 +174,7 @@ class decomposition():
 		#return [disk,halo,bulge], disk, halo, bulge
 
 
-	def _decomp(self, circ_val = 0.7, plotter = False, include_zmax = False, zmax = 0.0005, Gcosmo = 43.0071):
+	def _decomp(self, circ_val = 0.7, plotter = False, savefig = False, include_zmax = False, zmax = 0.0005, Gcosmo = 43.0071):
 		ID = self.s.id
 		# get number of particle 
 		na = self.s.nparticlesall
@@ -289,7 +289,7 @@ class decomposition():
 		spheroid_ID = ID[istars][iensort][ispheroid]
 		
 		if plotter == True:
-			fig, ax = plt.subplots(1, 1, figsize=(8,6))
+			fig, ax = plt.subplots(1, 1)
 			
 			ydatatot, edges = np.histogram( eps2, bins=100, weights=smass, range=[-1.7,1.7] )
 			xdatatot = 0.5 * (edges[1:] + edges[:-1])
@@ -304,6 +304,8 @@ class decomposition():
 			ax.plot( xdatatot, ydatatot, 'k', label='total' )
 			ax.legend()
 			ax.set_xlabel('$\epsilon$')
+            if savefig == True:
+                fig.savefig(self.plotdir + 'decomposition.png', format = 'png', dpi = 300, bbox_to_inches = 'thight')
 			plt.show()
 			
 		return(disk_ID, spheroid_ID)    
