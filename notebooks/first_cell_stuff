@@ -1,0 +1,37 @@
+import matplotlib.pyplot as plt
+from matplotlib import rcParams
+import copy
+
+%matplotlib inline
+
+rcParams['font.size'] = 16
+rcParams['lines.linewidth'] = 1.5
+rcParams['axes.linewidth'] = 1.5
+rcParams['ytick.major.width'] = 1.5
+rcParams['xtick.major.width'] = 1.5
+rcParams['image.cmap'] = 'magma'
+
+cmap = copy.copy(plt.cm.get_cmap(rcParams['image.cmap']))
+cmap.set_bad((0,0,0))
+%config InlineBackend.figure_format = 'retina'
+
+from IPython.core.display import display, HTML
+display(HTML("<style>.container { width:100% !important; }</style>"))
+
+
+machine = 'mac'
+#machine = 'magny'
+machine = 'virgo'
+
+if machine == 'magny':
+    basedir = "/hits/universe/GigaGalaxy/level4_MHD/"
+    filedir = "/home/extmilan/masterthesis/files/"
+    plotdir = "/home/extmilan/masterthesis/plots/"
+elif machine == 'mac': 
+    basedir = "/Users/smilanov/Desktop/Auriga/level4/"
+    filedir = "/Users/smilanov/Documents/masterthesis/auriga_files/files/"
+    plotdir = "/Users/smilanov/Documents/masterthesis/auriga_files/plots/"
+elif machine == 'virgo': 
+    basedir = "/virgo/simulations/Auriga/level4_MHD/"
+    filedir = "/u/milas/masterthesis/masterproject/files/"
+    plotdir = "/u/milas/masterthesis/masterproject/plots/"
