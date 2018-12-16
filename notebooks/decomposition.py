@@ -283,7 +283,7 @@ class decomposition():
 		if include_zmax == True:
 			idisk, = np.where((eps2 >= circ_val) & (abs(self.s.pos[:,0][istars][iensort]) < zmax))
 			disk_ID = ID[istars][iensort][idisk]
-			ispheroid = np.where((eps2 < circ_val) or (abs(self.s.pos[:,0][istars][iensort]) > zmax))
+			ispheroid = np.where(((eps2 < circ_val) + ((eps2 >= circ_val) & (abs(self.s.pos[:,0][istars][iensort]) > zmax))))
 			spheroid_ID = ID[istars][iensort][ispheroid]
 
 		else:
@@ -309,7 +309,7 @@ class decomposition():
 			ax.legend()
 			ax.set_xlabel('$\epsilon$')
 			if savefig == True:
-				fig.savefig(self.plotdir + 'decomposition_snap_{}.png'.format(self.snapnr), format = 'png', dpi = 300, bbox_to_inches = 'thight')
+				fig.savefig(self.plotdir + 'potential/decomposition_snap_{}.png'.format(self.snapnr), format = 'png', dpi = 300, bbox_to_inches = 'thight')
 			plt.show()
 			
 		return(disk_ID, spheroid_ID)    
