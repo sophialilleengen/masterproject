@@ -362,7 +362,7 @@ class decomposition():
 		self.i_z_inhalo = (self.z_halo_kpc >= -5.) * (self.z_halo_kpc <= 5.)
         
 	def _get_circ_stars_pos_vel(self):
-		self.ID_disk_circ, self.ID_spher_circ = self._decomp(circ_val = 0.95, include_zmax = True, zmax = 0.005)
+		self.ID_disk_circ, self.ID_spher_circ = self._decomp(circ_val = 0.98, include_zmax = True, zmax = 0.005)
 		self.i_disk_circ= np.isin(self.s.id, self.ID_disk_circ)
 		(self.R_circ_stars_kpc, self.phi_circ_stars_, self.z_circ_stars_kpc), (self.vR_circ_stars_kms, self.vphi_circ_stars_kms, self.vz_circ_stars_kms) = get_cylindrical_vectors(self.s, self.sf, self.i_disk_circ)
 		self.r_circ_stars_kpc = 1000. * self.s.r()[self.i_disk_circ]
