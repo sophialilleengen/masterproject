@@ -302,8 +302,8 @@ class decomposition():
 			ydatad, edgesd = np.histogram( eps2[idisk], bins=100, weights=smass[idisk], range=[-1.7,1.7] )
 			ydatas, edgess = np.histogram( eps2[ispheroid], bins=100, weights=smass[ispheroid], range=[-1.7,1.7] )
 
-			ax.fill( xdata, ydatad, fc='b', alpha=0.5, fill=True, lw=0, label='disc' )
-			ax.fill( xdata, ydatas, fc='y', alpha=0.5, fill=True, lw=0, label='spheroid' )
+			ax.fill( xdata, ydatad, fc='b', alpha=0.5, fill=True, lw=0, label='disk' )
+			ax.fill( xdata, ydatas, fc='g', alpha=0.5, fill=True, lw=0, label='spheroid' )
 			
 			ax.plot( xdatatot, ydatatot, 'k', label='total' )
 			ax.legend()
