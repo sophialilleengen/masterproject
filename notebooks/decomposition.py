@@ -24,7 +24,7 @@ from astropy import units as u
 
 
 from matplotlib import pyplot as plt
-
+from matplotlib.colors import LogNorm
 
 
 
@@ -177,7 +177,7 @@ class decomposition():
 		#return [disk,halo,bulge], disk, halo, bulge
 
 
-	def _decomp(self, circ_val = 0.7, plotter = False, savefig = False, include_zmax = False, zmax = 0.0005, Gcosmo = 43.0071):
+	def _decomp(self, circ_val = 0.7, plotter = False, elzplotter = False, savefig = False, include_zmax = False, zmax = 0.0005, Gcosmo = 43.0071):
 		ID = self.s.id
 		# get number of particle 
 		na = self.s.nparticlesall
@@ -252,6 +252,7 @@ class decomposition():
 		iensort = np.argsort(spec_energy)
 		eps = eps[iensort]
 		eps2 = eps2[iensort]
+		lz = eps2
 		spec_energy = spec_energy[iensort]
 		smass = smass[iensort]
 		cosalpha = cosalpha[iensort]
@@ -308,8 +309,21 @@ class decomposition():
 			ax.plot( xdatatot, ydatatot, 'k', label='total' )
 			ax.legend()
 			ax.set_xlabel('$\epsilon$')
+			ax.set_ylabel('n($\epsilon$)')
 			if savefig == True:
 				fig.savefig(self.plotdir + 'potential/decomposition_snap_{}.png'.format(self.snapnr), format = 'png', dpi = 300, bbox_to_inches = 'thight')
+			plt.show()
+			
+		if elzplotter == True:
+			fig, ax = plt.subplots()
+
+			I = ax.hist2d(lz, spec_energy, bins = 101, norm = LogNorm(), cmap = plt.cm.magma)
+			cbar = plt.colorbar(I[3], ax = ax)
+			cbar.set_label('N$_\mathrm{stars}$')
+			ax.set_xlabel('L$_\mathrm{z}$ [kpc km s$^{-1}$]')
+			ax.set_ylabel('E [km$^2$ s$^{-2}$]')
+			if savefig == True:
+				fig.savefig(self.plotdir + 'potential/decomposition_elz_snap_{}.png'.format(self.snapnr), format = 'png', dpi = 300, bbox_to_inches = 'thight')
 			plt.show()
 			
 		return(disk_ID, spheroid_ID)    
@@ -380,9 +394,9 @@ class decomposition():
         
 	def _set_plot_colors(self):
 		self.disk_color = 'blue'
-		self.halo_color = 'orange'
+		self.halo_color = 'red'
 		self.spher_color = 'green'
-		self.tot_color = 'red'
+		self.tot_color = 'black'
 ##### Circular velocities #####
         
 	def circvel_data(self, N = 25):
