@@ -318,7 +318,7 @@ class decomposition():
 		if elzplotter == True:
 			fig, ax = plt.subplots()
 
-			I = ax.hist2d(lz, E, bins = 101, norm = LogNorm(), cmap = plt.cm.magma)
+			I = ax.hist2d((1000.*lz), E, bins = 101, norm = LogNorm(), cmap = plt.cm.magma)
 			cbar = plt.colorbar(I[3], ax = ax)
 			cbar.set_label('N$_\mathrm{stars}$')
 			ax.set_xlabel('L$_\mathrm{z}$ [kpc km s$^{-1}$]')
