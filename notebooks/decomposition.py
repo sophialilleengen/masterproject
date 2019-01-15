@@ -234,9 +234,11 @@ class decomposition():
 		jc = radius[nn] * np.sqrt( Gcosmo * msum[nn] / radius[nn] )
 		# get z-component of specific angular momentum !! CHECK AGAIN XYZ 
 		jz = j[:,0]
-
+		lz = j[:,0]
+    
 		# calculate specific energy
 		spec_energy[:] = 0.5 * (vel[nn,:]**2).sum(axis=1) + pot[nn]
+		E = spec_energy[:]
 		# circularity parameter eps = j_z / j_circ
 		eps[:] = jz / jc
 		eps2[:] = jz
@@ -252,7 +254,6 @@ class decomposition():
 		iensort = np.argsort(spec_energy)
 		eps = eps[iensort]
 		eps2 = eps2[iensort]
-		lz = eps2
 		spec_energy = spec_energy[iensort]
 		smass = smass[iensort]
 		cosalpha = cosalpha[iensort]
@@ -317,7 +318,7 @@ class decomposition():
 		if elzplotter == True:
 			fig, ax = plt.subplots()
 
-			I = ax.hist2d(lz, spec_energy, bins = 101, norm = LogNorm(), cmap = plt.cm.magma)
+			I = ax.hist2d(lz, E, bins = 101, norm = LogNorm(), cmap = plt.cm.magma)
 			cbar = plt.colorbar(I[3], ax = ax)
 			cbar.set_label('N$_\mathrm{stars}$')
 			ax.set_xlabel('L$_\mathrm{z}$ [kpc km s$^{-1}$]')
